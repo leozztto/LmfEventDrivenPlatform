@@ -24,7 +24,7 @@ class OrderTest {
 
         assertEquals(
                 OrderStatus.PENDING_PAYMENT,
-                order.getStatus()
+                order.getOrderStatus()
         );
     }
 
@@ -72,7 +72,7 @@ class OrderTest {
 
         assertEquals(
                 OrderStatus.PAYMENT_APPROVED,
-                order.getStatus()
+                order.getOrderStatus()
         );
     }
 

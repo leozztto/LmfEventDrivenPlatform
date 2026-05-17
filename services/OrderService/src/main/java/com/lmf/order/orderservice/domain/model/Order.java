@@ -9,25 +9,25 @@ public class Order {
 
     private final UUID id;
     private final UUID customerId;
-    private final List<OrderItem> items;
+    private final List<OrderItem> orderItems;
 
-    private OrderStatus status;
+    private OrderStatus orderStatus;
     private BigDecimal totalAmount;
 
     private final OffsetDateTime createdAt;
 
     public Order(
             UUID customerId,
-            List<OrderItem> items
+            List<OrderItem> orderItems
     ) {
 
-        validate(items);
+        validate(orderItems);
 
         this.id = UUID.randomUUID();
         this.customerId = customerId;
-        this.items = items;
+        this.orderItems = orderItems;
 
-        this.status = OrderStatus.PENDING_PAYMENT;
+        this.orderStatus = OrderStatus.PENDING_PAYMENT;
         this.totalAmount = calculateTotal();
 
         this.createdAt = OffsetDateTime.now();
@@ -42,27 +42,27 @@ public class Order {
 
     private BigDecimal calculateTotal() {
 
-        return items.stream()
+        return orderItems.stream()
                 .map(OrderItem::getSubtotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     public void approvePayment() {
 
-        if (status != OrderStatus.PENDING_PAYMENT) {
+        if (orderStatus != OrderStatus.PENDING_PAYMENT) {
             throw new IllegalStateException("Invalid order status");
         }
 
-        this.status = OrderStatus.PAYMENT_APPROVED;
+        this.orderStatus = OrderStatus.PAYMENT_APPROVED;
     }
 
     public void rejectPayment() {
 
-        if (status != OrderStatus.PENDING_PAYMENT) {
+        if (orderStatus != OrderStatus.PENDING_PAYMENT) {
             throw new IllegalStateException("Invalid order status");
         }
 
-        this.status = OrderStatus.PAYMENT_REJECTED;
+        this.orderStatus = OrderStatus.PAYMENT_REJECTED;
     }
 
     public UUID getId() {
@@ -73,12 +73,12 @@ public class Order {
         return customerId;
     }
 
-    public List<OrderItem> getItems() {
-        return items;
+    public List<OrderItem> getOrderItems() {
+        return orderItems;
     }
 
-    public OrderStatus getStatus() {
-        return status;
+    public OrderStatus getOrderStatus() {
+        return orderStatus;
     }
 
     public BigDecimal getTotalAmount() {

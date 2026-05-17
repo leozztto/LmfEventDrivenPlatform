@@ -31,23 +31,15 @@ public class CreateOrderUseCase {
             CreateOrderCommand command
     ) {
 
-        List<OrderItem> items =
+        List<OrderItem> orderItems =
                 command.items()
                         .stream()
-                        .map(item -> new OrderItem(
-                                item.productId(),
-                                item.quantity(),
-                                item.unitPrice()
-                        ))
+                        .map(orderItem -> new OrderItem(orderItem.productId(), orderItem.quantity(), orderItem.unitPrice()))
                         .toList();
 
-        Order order = new Order(
-                command.customerId(),
-                items
-        );
+        Order order = new Order(command.customerId(), orderItems);
 
-        Order savedOrder =
-                orderRepository.save(order);
+        Order savedOrder = orderRepository.save(order);
 
         saveOutboxEvent(savedOrder);
 
@@ -58,14 +50,11 @@ public class CreateOrderUseCase {
         );
     }
 
-    private void saveOutboxEvent(
-            Order order
-    ) {
+    private void saveOutboxEvent(Order order) {
 
         try {
 
-            String payload =
-                    objectMapper.writeValueAsString(order);
+            String payload = objectMapper.writeValueAsString(order);
 
             OutboxEventEntity event =
                     new OutboxEventEntity(
@@ -80,10 +69,7 @@ public class CreateOrderUseCase {
 
         } catch (JsonProcessingException ex) {
 
-            throw new RuntimeException(
-                    "Failed to create outbox event",
-                    ex
-            );
+            throw new RuntimeException("Failed to create outbox event", ex);
         }
     }
 }

@@ -1,14 +1,14 @@
 # Java
-target
-.class
+target/
+*.class
 
 # IDE
-.idea
-.vscode
-.iml
+.idea/
+.vscode/
+*.iml
 
 # Logs
-.log
+*.log
 
 # OS
 .DS_Store
@@ -18,5 +18,5 @@ Thumbs.db
 .env
 
 # Build
-build
-.gradle
+build/
+.gradle/

@@ -1,0 +1,28 @@
+package com.lmf.order.orderservice.infrastructure.persistence.repository;
+
+import com.lmf.order.orderservice.domain.model.Order;
+import com.lmf.order.orderservice.domain.repository.OrderRepository;
+import com.lmf.order.orderservice.infrastructure.persistence.mapper.OrderEntityMapper;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Repository;
+
+@Repository
+@RequiredArgsConstructor
+public class OrderRepositoryAdapter
+        implements OrderRepository {
+
+    private final SpringDataOrderRepository springDataOrderRepository;
+
+    private final OrderEntityMapper orderEntityMapper =
+            new OrderEntityMapper();
+
+    @Override
+    public Order save(Order order) {
+
+        var entity = orderEntityMapper.toEntity(order);
+
+        var savedEntity = springDataOrderRepository.save(entity);
+
+        return orderEntityMapper.toDomain(savedEntity);
+    }
+}

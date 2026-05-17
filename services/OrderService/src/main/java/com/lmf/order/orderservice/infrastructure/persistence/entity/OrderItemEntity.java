@@ -30,7 +30,7 @@ public class OrderItemEntity {
     private BigDecimal subtotal;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id")
+    @JoinColumn(name = "order_id", nullable = false)
     private OrderEntity orderEntity;
 
     public OrderItemEntity(

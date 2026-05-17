@@ -35,11 +35,11 @@ public class OrderEntity {
     private OffsetDateTime createdAt;
 
     @OneToMany(
-            mappedBy = "order",
+            mappedBy = "orderEntity",
             cascade = CascadeType.ALL,
             orphanRemoval = true
     )
-    private List<OrderItemEntity> items = new ArrayList<>();
+    private List<OrderItemEntity> orderItemsEntities = new ArrayList<>();
 
     public OrderEntity(
             UUID id,
@@ -55,8 +55,8 @@ public class OrderEntity {
         this.createdAt = createdAt;
     }
 
-    public void addItem(OrderItemEntity item) {
-        item.linkToOrder(this);
-        this.items.add(item);
+    public void addItem(OrderItemEntity orderItemEntity) {
+        orderItemEntity.linkToOrder(this);
+        this.orderItemsEntities.add(orderItemEntity);
     }
 }

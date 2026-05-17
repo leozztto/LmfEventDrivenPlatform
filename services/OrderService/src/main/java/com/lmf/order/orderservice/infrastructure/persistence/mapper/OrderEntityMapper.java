@@ -43,7 +43,7 @@ public class OrderEntityMapper {
         return new Order(
                 entity.getCustomerId(),
 
-                entity.getItems()
+                entity.getOrderItemsEntities()
                         .stream()
                         .map(item -> new OrderItem(
                                 item.getProductId(),

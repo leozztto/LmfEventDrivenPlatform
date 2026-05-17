@@ -1,7 +1,7 @@
 CREATE TABLE orders (
     id UUID PRIMARY KEY,
     customer_id UUID NOT NULL,
-    status VARCHAR(50) NOT NULL,
+    order_status VARCHAR(50) NOT NULL,
     total_amount NUMERIC(19,2) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
@@ -26,7 +26,7 @@ CREATE TABLE outbox_events (
     aggregate_type VARCHAR(100) NOT NULL,
     event_type VARCHAR(100) NOT NULL,
     payload TEXT NOT NULL,
-    status VARCHAR(50) NOT NULL,
+    outbox_status VARCHAR(50) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
@@ -34,7 +34,7 @@ CREATE INDEX idx_orders_customer_id
 ON orders(customer_id);
 
 CREATE INDEX idx_outbox_status
-ON outbox_events(status);
+ON outbox_events(outbox_status);
 
 CREATE INDEX idx_outbox_created_at
 ON outbox_events(created_at);

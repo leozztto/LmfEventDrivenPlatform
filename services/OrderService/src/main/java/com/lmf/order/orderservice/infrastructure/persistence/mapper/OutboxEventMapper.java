@@ -14,7 +14,7 @@ public class OutboxEventMapper {
                 event.aggregateType(),
                 event.eventType(),
                 event.payload(),
-                event.status()
+                event.outboxStatus()
         );
 
         return entity;

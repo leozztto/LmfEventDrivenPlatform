@@ -9,7 +9,7 @@ public record OutboxEvent(
         String aggregateType,
         String eventType,
         String payload,
-        OutboxStatus status,
+        OutboxStatus outboxStatus,
         OffsetDateTime createdAt
 ) {
 }

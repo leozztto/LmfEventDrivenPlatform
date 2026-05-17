@@ -52,4 +52,16 @@ public class OutboxEventEntity {
         this.outboxStatus = outboxStatus;
         this.createdAt = OffsetDateTime.now();
     }
+
+    public void markAsProcessing() {
+        this.outboxStatus = OutboxStatus.PROCESSING;
+    }
+
+    public void markAsPublished() {
+        this.outboxStatus = OutboxStatus.PUBLISHED;
+    }
+
+    public void markAsFailed() {
+        this.outboxStatus = OutboxStatus.FAILED;
+    }
 }

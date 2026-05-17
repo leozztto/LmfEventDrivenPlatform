@@ -9,7 +9,7 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.lmf.fraud</groupId>
-	<artifactId>LmfFraudService</artifactId>
+	<artifactId>fraud-service</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name/>
 	<description/>

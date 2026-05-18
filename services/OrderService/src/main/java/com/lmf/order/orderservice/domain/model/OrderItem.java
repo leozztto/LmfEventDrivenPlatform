@@ -13,11 +13,7 @@ public class OrderItem {
     private final BigDecimal unitPrice;
     private final BigDecimal subtotal;
 
-    public OrderItem(
-            UUID productId,
-            Integer quantity,
-            BigDecimal unitPrice
-    ) {
+    public OrderItem(UUID productId, Integer quantity, BigDecimal unitPrice) {
 
         validate(quantity, unitPrice);
 
@@ -27,10 +23,7 @@ public class OrderItem {
         this.subtotal = calculateSubtotal();
     }
 
-    private void validate(
-            Integer quantity,
-            BigDecimal unitPrice
-    ) {
+    private void validate(Integer quantity, BigDecimal unitPrice) {
 
         if (quantity == null || quantity <= 0) {
             throw new InvalidQuantityException("Quantity must be greater than zero");

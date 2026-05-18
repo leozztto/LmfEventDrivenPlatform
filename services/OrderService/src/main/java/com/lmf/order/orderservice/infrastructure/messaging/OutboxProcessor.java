@@ -42,11 +42,7 @@ public class OutboxProcessor {
             outboxEventEntity.markAsProcessing();
             outboxEventRepository.update(outboxEventEntity);
 
-            orderEventPublisher.publish(
-                    ORDER_CREATED_TOPIC,
-                    outboxEventEntity.getAggregateId().toString(),
-                    outboxEventEntity.getPayload()
-            );
+            orderEventPublisher.publish(ORDER_CREATED_TOPIC, outboxEventEntity.getAggregateId().toString(), outboxEventEntity.getPayload());
 
             outboxEventEntity.markAsPublished();
             outboxEventRepository.update(outboxEventEntity);

@@ -20,15 +20,7 @@ public class OrderControllerIT extends AbstractIntegrationTest {
     @Test
     void shouldCreateOrderSuccessfully() {
 
-        Map<String, Object> requestBody =
-                Map.of(
-                        "customerId", UUID.randomUUID(),
-                        "items", java.util.List.of(
-                                Map.of("productId", UUID.randomUUID(),
-                                        "quantity", 2,
-                                        "unitPrice", 100
-                                ))
-                );
+        Map<String, Object> requestBody = Map.of("customerId", UUID.randomUUID(), "items", java.util.List.of(Map.of("productId", UUID.randomUUID(), "quantity", 2, "unitPrice", 100)));
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("Idempotency-Key", UUID.randomUUID().toString());

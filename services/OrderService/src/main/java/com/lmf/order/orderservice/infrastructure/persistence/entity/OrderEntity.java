@@ -2,7 +2,7 @@ package com.lmf.order.orderservice.infrastructure.persistence.entity;
 
 import com.lmf.order.orderservice.domain.model.OrderStatus;
 import jakarta.persistence.*;
-        import lombok.AccessLevel;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -34,20 +34,10 @@ public class OrderEntity {
     @Column(nullable = false)
     private OffsetDateTime createdAt;
 
-    @OneToMany(
-            mappedBy = "orderEntity",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-    )
+    @OneToMany(mappedBy = "orderEntity", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItemEntity> orderItemsEntities = new ArrayList<>();
 
-    public OrderEntity(
-            UUID id,
-            UUID customerId,
-            OrderStatus orderStatus,
-            BigDecimal totalAmount,
-            OffsetDateTime createdAt
-    ) {
+    public OrderEntity(UUID id, UUID customerId, OrderStatus orderStatus, BigDecimal totalAmount, OffsetDateTime createdAt) {
         this.id = id;
         this.customerId = customerId;
         this.orderStatus = orderStatus;

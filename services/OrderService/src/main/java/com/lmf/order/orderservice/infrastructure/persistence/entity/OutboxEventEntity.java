@@ -37,13 +37,7 @@ public class OutboxEventEntity {
     @Column(nullable = false)
     private OffsetDateTime createdAt;
 
-    public OutboxEventEntity(
-            UUID aggregateId,
-            String aggregateType,
-            String eventType,
-            String payload,
-            OutboxStatus outboxStatus
-    ) {
+    public OutboxEventEntity(UUID aggregateId, String aggregateType, String eventType, String payload, OutboxStatus outboxStatus) {
         this.id = UUID.randomUUID();
         this.aggregateId = aggregateId;
         this.aggregateType = aggregateType;

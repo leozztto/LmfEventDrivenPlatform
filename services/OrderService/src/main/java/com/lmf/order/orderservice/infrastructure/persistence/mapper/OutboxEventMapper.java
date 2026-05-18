@@ -9,13 +9,7 @@ public class OutboxEventMapper {
 
     public OutboxEventEntity toEntity(OutboxEvent event) {
 
-        OutboxEventEntity entity = new OutboxEventEntity(
-                event.aggregateId(),
-                event.aggregateType(),
-                event.eventType(),
-                event.payload(),
-                event.outboxStatus()
-        );
+        OutboxEventEntity entity = new OutboxEventEntity(event.aggregateId(), event.aggregateType(), event.eventType(), event.payload(), event.outboxStatus());
 
         return entity;
     }

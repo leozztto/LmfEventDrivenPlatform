@@ -29,7 +29,6 @@ public class OrderController {
 
     private CreateOrderCommand toCommand(String idempotencyKey, CreateOrderRequest request) {
 
-        return new CreateOrderCommand(idempotencyKey, request.getCustomerId(),
-                request.getItems().stream().map(item -> new CreateOrderCommand.OrderItemCommand(item.getProductId(), item.getQuantity(), item.getUnitPrice())).toList());
+        return new CreateOrderCommand(idempotencyKey, request.getCustomerId(), request.getItems().stream().map(item -> new CreateOrderCommand.OrderItemCommand(item.getProductId(), item.getQuantity(), item.getUnitPrice())).toList());
     }
 }

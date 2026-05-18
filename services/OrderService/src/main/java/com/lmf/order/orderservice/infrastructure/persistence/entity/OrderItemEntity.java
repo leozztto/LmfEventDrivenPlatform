@@ -1,7 +1,7 @@
 package com.lmf.order.orderservice.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
-        import lombok.AccessLevel;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -33,13 +33,7 @@ public class OrderItemEntity {
     @JoinColumn(name = "order_id", nullable = false)
     private OrderEntity orderEntity;
 
-    public OrderItemEntity(
-            UUID id,
-            UUID productId,
-            Integer quantity,
-            BigDecimal unitPrice,
-            BigDecimal subtotal
-    ) {
+    public OrderItemEntity(UUID id, UUID productId, Integer quantity, BigDecimal unitPrice, BigDecimal subtotal) {
         this.id = id;
         this.productId = productId;
         this.quantity = quantity;

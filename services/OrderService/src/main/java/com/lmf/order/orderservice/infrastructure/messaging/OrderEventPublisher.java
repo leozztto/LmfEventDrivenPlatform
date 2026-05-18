@@ -10,16 +10,8 @@ public class OrderEventPublisher {
 
     private final KafkaTemplate<String, String> kafkaTemplate;
 
-    public void publish(
-            String topic,
-            String key,
-            String payload
-    ) {
+    public void publish(String topic, String key, String payload) {
 
-        kafkaTemplate.send(
-                topic,
-                key,
-                payload
-        );
+        kafkaTemplate.send(topic, key, payload);
     }
 }

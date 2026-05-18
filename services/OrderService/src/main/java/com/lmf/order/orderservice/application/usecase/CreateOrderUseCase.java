@@ -27,15 +27,9 @@ public class CreateOrderUseCase {
     private final ObjectMapper objectMapper;
 
     @Transactional
-    public CreateOrderResult execute(
-            CreateOrderCommand command
-    ) {
+    public CreateOrderResult execute(CreateOrderCommand command) {
 
-        List<OrderItem> orderItems =
-                command.items()
-                        .stream()
-                        .map(orderItem -> new OrderItem(orderItem.productId(), orderItem.quantity(), orderItem.unitPrice()))
-                        .toList();
+        List<OrderItem> orderItems = command.items().stream().map(orderItem -> new OrderItem(orderItem.productId(), orderItem.quantity(), orderItem.unitPrice())).toList();
 
         Order order = new Order(command.customerId(), orderItems);
 
@@ -43,11 +37,7 @@ public class CreateOrderUseCase {
 
         saveOutboxEvent(savedOrder);
 
-        return new CreateOrderResult(
-                savedOrder.getId(),
-                savedOrder.getOrderStatus().name(),
-                savedOrder.getTotalAmount()
-        );
+        return new CreateOrderResult(savedOrder.getId(), savedOrder.getOrderStatus().name(), savedOrder.getTotalAmount());
     }
 
     private void saveOutboxEvent(Order order) {
@@ -56,14 +46,7 @@ public class CreateOrderUseCase {
 
             String payload = objectMapper.writeValueAsString(order);
 
-            OutboxEventEntity event =
-                    new OutboxEventEntity(
-                            order.getId(),
-                            "ORDER",
-                            "ORDER_CREATED",
-                            payload,
-                            OutboxStatus.PENDING
-                    );
+            OutboxEventEntity event = new OutboxEventEntity(order.getId(), "ORDER", "ORDER_CREATED", payload, OutboxStatus.PENDING);
 
             outboxEventRepository.save(event);
 

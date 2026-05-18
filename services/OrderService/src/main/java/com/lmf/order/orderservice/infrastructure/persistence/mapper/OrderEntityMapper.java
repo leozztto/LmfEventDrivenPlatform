@@ -6,8 +6,6 @@ import com.lmf.order.orderservice.infrastructure.persistence.entity.OrderEntity;
 import com.lmf.order.orderservice.infrastructure.persistence.entity.OrderItemEntity;
 import org.springframework.stereotype.Component;
 
-import java.util.stream.Collectors;
-
 import java.util.UUID;
 
 @Component

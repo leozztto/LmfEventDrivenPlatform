@@ -1,5 +1,8 @@
 package com.lmf.order.orderservice.domain.model;
 
+import com.lmf.order.orderservice.domain.exception.EmptyOrderException;
+import com.lmf.order.orderservice.domain.exception.InvalidOrderStatusException;
+
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -16,10 +19,7 @@ public class Order {
 
     private final OffsetDateTime createdAt;
 
-    public Order(
-            UUID customerId,
-            List<OrderItem> orderItems
-    ) {
+    public Order(UUID customerId, List<OrderItem> orderItems) {
 
         validate(orderItems);
 
@@ -33,24 +33,36 @@ public class Order {
         this.createdAt = OffsetDateTime.now();
     }
 
+    public Order(UUID id, UUID customerId, List<OrderItem> orderItems, OrderStatus orderStatus, OffsetDateTime createdAt) {
+
+        validate(orderItems);
+
+        this.id = id;
+        this.customerId = customerId;
+        this.orderItems = orderItems;
+
+        this.orderStatus = orderStatus;
+        this.createdAt = createdAt;
+
+        this.totalAmount = calculateTotal();
+    }
+
     private void validate(List<OrderItem> items) {
 
         if (items == null || items.isEmpty()) {
-            throw new IllegalArgumentException("Order must contain at least one item");
+            throw new EmptyOrderException();
         }
     }
 
     private BigDecimal calculateTotal() {
 
-        return orderItems.stream()
-                .map(OrderItem::getSubtotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return orderItems.stream().map(OrderItem::getSubtotal).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     public void approvePayment() {
 
         if (orderStatus != OrderStatus.PENDING_PAYMENT) {
-            throw new IllegalStateException("Invalid order status");
+            throw new InvalidOrderStatusException(orderStatus.name());
         }
 
         this.orderStatus = OrderStatus.PAYMENT_APPROVED;
@@ -59,7 +71,7 @@ public class Order {
     public void rejectPayment() {
 
         if (orderStatus != OrderStatus.PENDING_PAYMENT) {
-            throw new IllegalStateException("Invalid order status");
+            throw new InvalidOrderStatusException(orderStatus.name());
         }
 
         this.orderStatus = OrderStatus.PAYMENT_REJECTED;

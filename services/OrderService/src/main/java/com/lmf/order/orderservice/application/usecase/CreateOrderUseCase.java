@@ -4,12 +4,15 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lmf.order.orderservice.application.usecase.command.CreateOrderCommand;
 import com.lmf.order.orderservice.application.usecase.result.CreateOrderResult;
+import com.lmf.order.orderservice.domain.exception.OrderNotFoundException;
 import com.lmf.order.orderservice.domain.model.Order;
 import com.lmf.order.orderservice.domain.model.OrderItem;
 import com.lmf.order.orderservice.domain.model.OutboxStatus;
 import com.lmf.order.orderservice.domain.repository.OrderRepository;
 import com.lmf.order.orderservice.domain.repository.OutboxEventRepository;
+import com.lmf.order.orderservice.infrastructure.persistence.entity.IdempotencyEntity;
 import com.lmf.order.orderservice.infrastructure.persistence.entity.OutboxEventEntity;
+import com.lmf.order.orderservice.infrastructure.persistence.repository.IdempotencyRepositoryAdapter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,16 +27,29 @@ public class CreateOrderUseCase {
 
     private final OutboxEventRepository outboxEventRepository;
 
+    private final IdempotencyRepositoryAdapter idempotencyRepository;
+
     private final ObjectMapper objectMapper;
 
     @Transactional
     public CreateOrderResult execute(CreateOrderCommand command) {
 
-        List<OrderItem> orderItems = command.items().stream().map(orderItem -> new OrderItem(orderItem.productId(), orderItem.quantity(), orderItem.unitPrice())).toList();
+        var existing = idempotencyRepository.findByKey(command.idempotencyKey());
+
+        if (existing.isPresent()) {
+
+            Order existingOrder = orderRepository.findById(existing.get().getOrderId()).orElseThrow(() -> new OrderNotFoundException(existing.get().getOrderId()));
+
+            return new CreateOrderResult(existingOrder.getId(), existingOrder.getOrderStatus().name(), existingOrder.getTotalAmount());
+        }
+
+        List<OrderItem> orderItems = command.items().stream().map(item -> new OrderItem(item.productId(), item.quantity(), item.unitPrice())).toList();
 
         Order order = new Order(command.customerId(), orderItems);
 
         Order savedOrder = orderRepository.save(order);
+
+        idempotencyRepository.save(new IdempotencyEntity(command.idempotencyKey(), savedOrder.getId()));
 
         saveOutboxEvent(savedOrder);
 

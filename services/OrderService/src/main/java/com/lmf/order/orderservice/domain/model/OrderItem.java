@@ -1,5 +1,8 @@
 package com.lmf.order.orderservice.domain.model;
 
+import com.lmf.order.orderservice.domain.exception.InvalidQuantityException;
+import com.lmf.order.orderservice.domain.exception.InvalidUnitPriceException;
+
 import java.math.BigDecimal;
 import java.util.UUID;
 
@@ -30,11 +33,11 @@ public class OrderItem {
     ) {
 
         if (quantity == null || quantity <= 0) {
-            throw new IllegalArgumentException("Quantity must be greater than zero");
+            throw new InvalidQuantityException("Quantity must be greater than zero");
         }
 
         if (unitPrice == null || unitPrice.signum() <= 0) {
-            throw new IllegalArgumentException("Unit price must be greater than zero");
+            throw new InvalidUnitPriceException("Unit price must be greater than zero");
         }
     }
 

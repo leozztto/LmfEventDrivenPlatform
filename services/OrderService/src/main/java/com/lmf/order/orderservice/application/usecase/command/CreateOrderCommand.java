@@ -5,14 +5,11 @@ import java.util.List;
 import java.util.UUID;
 
 public record CreateOrderCommand(
+        String idempotencyKey,
         UUID customerId,
         List<OrderItemCommand> items
 ) {
 
-    public record OrderItemCommand(
-            UUID productId,
-            Integer quantity,
-            BigDecimal unitPrice
-    ) {
+    public record OrderItemCommand(UUID productId, Integer quantity, BigDecimal unitPrice) {
     }
 }

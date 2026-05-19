@@ -19,11 +19,13 @@ public class OutboxProcessor {
     private final OutboxEventRepository outboxEventRepository;
     private final OrderEventPublisher orderEventPublisher;
 
-    @Scheduled(fixedDelay = 5000)
+    @Scheduled(fixedDelay = 300000)
     @Transactional
     public void process() {
 
         var pendingEvents = outboxEventRepository.findTop100ByOutboxStatusOrderByCreatedAtAsc(OutboxStatus.PENDING);
+
+        log.info("Processing pending outbox events. totalEvents={}", pendingEvents.size());
 
         if (pendingEvents.isEmpty()) {
             log.debug("No pending outbox events found");
@@ -39,22 +41,42 @@ public class OutboxProcessor {
 
         try {
 
+            log.info("Processing outbox event. eventId={}, retryCount={}", outboxEventEntity.getId(), outboxEventEntity.getRetryCount());
+
             outboxEventEntity.markAsProcessing();
+
             outboxEventRepository.update(outboxEventEntity);
+
+            log.info("Publishing event to Kafka. topic={}, aggregateId={}, eventType={}, eventId={}", ORDER_CREATED_TOPIC, outboxEventEntity.getAggregateId(), outboxEventEntity.getEventType(), outboxEventEntity.getId());
 
             orderEventPublisher.publish(ORDER_CREATED_TOPIC, outboxEventEntity.getAggregateId().toString(), outboxEventEntity.getPayload());
 
             outboxEventEntity.markAsPublished();
+
             outboxEventRepository.update(outboxEventEntity);
 
-            log.info("Outbox event published successfully. eventId={}", outboxEventEntity.getId());
+            log.info("Outbox event published successfully. eventId={}, aggregateId={}, eventType={}, topic={}, status={}", outboxEventEntity.getId(), outboxEventEntity.getAggregateId(), outboxEventEntity.getEventType(), ORDER_CREATED_TOPIC, outboxEventEntity.getOutboxStatus());
 
         } catch (Exception ex) {
 
-            outboxEventEntity.markAsFailed();
+            outboxEventEntity.markAsFailed(ex.getMessage());
+
             outboxEventRepository.update(outboxEventEntity);
 
-            log.error("Failed to publish outbox event. eventId={}", outboxEventEntity.getId(), ex);
+            log.warn("Outbox event failed. eventId={}, retryCount={}, error={}", outboxEventEntity.getId(), outboxEventEntity.getRetryCount(), ex.getMessage());
+
+            if (outboxEventEntity.getOutboxStatus() == OutboxStatus.DLQ) {
+
+                log.error("Outbox event moved to DLQ. eventId={}, retryCount={}, error={}", outboxEventEntity.getId(), outboxEventEntity.getRetryCount(), outboxEventEntity.getErrorMessage());
+
+            } else {
+
+                outboxEventEntity.markAsPendingRetry();
+
+                outboxEventRepository.save(outboxEventEntity);
+
+                log.info("Outbox event returned to PENDING for retry. eventId={}, retryCount={}", outboxEventEntity.getId(), outboxEventEntity.getRetryCount());
+            }
         }
     }
 }

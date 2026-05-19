@@ -37,6 +37,11 @@ public class OutboxEventEntity {
     @Column(nullable = false)
     private OffsetDateTime createdAt;
 
+    @Column(nullable = false)
+    private Integer retryCount;
+
+    private String errorMessage;
+
     public OutboxEventEntity(UUID aggregateId, String aggregateType, String eventType, String payload, OutboxStatus outboxStatus) {
         this.id = UUID.randomUUID();
         this.aggregateId = aggregateId;
@@ -45,6 +50,7 @@ public class OutboxEventEntity {
         this.payload = payload;
         this.outboxStatus = outboxStatus;
         this.createdAt = OffsetDateTime.now();
+        this.retryCount = 0;
     }
 
     public void markAsProcessing() {
@@ -55,7 +61,24 @@ public class OutboxEventEntity {
         this.outboxStatus = OutboxStatus.PUBLISHED;
     }
 
-    public void markAsFailed() {
+    public void markAsFailed(String errorMessage) {
+
+        this.retryCount++;
+
+        this.errorMessage = errorMessage;
+
+        if (retryCount >= 3) {
+
+            this.outboxStatus = OutboxStatus.DLQ;
+
+            return;
+        }
+
         this.outboxStatus = OutboxStatus.FAILED;
+    }
+
+    public void markAsPendingRetry() {
+
+        this.outboxStatus = OutboxStatus.PENDING;
     }
 }

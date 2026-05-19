@@ -41,3 +41,8 @@ info:
     name: OrderService
     version: 1.0.0
     environment: local
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},traceId=%X{traceId:-},spanId=%X{spanId:-}]"
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{traceId:-},%X{spanId:-}] correlationId=%X{correlationId:-} %logger{36} - %msg%n"

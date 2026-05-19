@@ -66,4 +66,35 @@ class OrderTest {
 
         return new OrderItem(UUID.randomUUID(), quantity, BigDecimal.valueOf(price));
     }
+
+    @Test
+    void shouldRejectPaymentSuccessfully() {
+
+        OrderItem item = new OrderItem(UUID.randomUUID(), 1, BigDecimal.TEN);
+
+        Order order = new Order(UUID.randomUUID(), List.of(item));
+
+        order.rejectPayment();
+
+        assertEquals(OrderStatus.PAYMENT_REJECTED, order.getOrderStatus());
+    }
+
+    @Test
+    void shouldThrowExceptionWhenApprovingInvalidStatus() {
+
+        OrderItem item = new OrderItem(UUID.randomUUID(), 1, BigDecimal.TEN);
+
+        Order order = new Order(UUID.randomUUID(), List.of(item));
+
+        order.approvePayment();
+
+        assertThrows(InvalidOrderStatusException.class, order::approvePayment);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenCreatingEmptyOrder() {
+
+        assertThrows(EmptyOrderException.class, () -> new Order(UUID.randomUUID(), List.of()));
+    }
+
 }

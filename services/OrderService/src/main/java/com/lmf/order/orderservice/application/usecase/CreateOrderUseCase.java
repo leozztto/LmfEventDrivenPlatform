@@ -14,11 +14,13 @@ import com.lmf.order.orderservice.infrastructure.persistence.entity.IdempotencyE
 import com.lmf.order.orderservice.infrastructure.persistence.entity.OutboxEventEntity;
 import com.lmf.order.orderservice.infrastructure.persistence.repository.IdempotencyRepositoryAdapter;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CreateOrderUseCase {
@@ -34,11 +36,15 @@ public class CreateOrderUseCase {
     @Transactional
     public CreateOrderResult execute(CreateOrderCommand command) {
 
+        log.info("Creating order. customerId={}, totalItems={}", command.customerId(), command.items().size());
+
         var existing = idempotencyRepository.findByKey(command.idempotencyKey());
 
         if (existing.isPresent()) {
 
             Order existingOrder = orderRepository.findById(existing.get().getOrderId()).orElseThrow(() -> new OrderNotFoundException(existing.get().getOrderId()));
+
+            log.info("Idempotent request detected. idempotencyKey={}, orderId={}", command.idempotencyKey(), existingOrder.getId());
 
             return new CreateOrderResult(existingOrder.getId(), existingOrder.getOrderStatus().name(), existingOrder.getTotalAmount());
         }
@@ -48,6 +54,8 @@ public class CreateOrderUseCase {
         Order order = new Order(command.customerId(), orderItems);
 
         Order savedOrder = orderRepository.save(order);
+
+        log.info("Order created successfully. orderId={}, customerId={}, totalAmount={}, status={}", savedOrder.getId(), savedOrder.getCustomerId(), savedOrder.getTotalAmount(), savedOrder.getOrderStatus());
 
         idempotencyRepository.save(new IdempotencyEntity(command.idempotencyKey(), savedOrder.getId()));
 

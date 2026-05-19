@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 @RequiredArgsConstructor
@@ -27,5 +29,13 @@ public class OutboxEventRepositoryImpl implements OutboxEventRepository {
     @Override
     public void update(OutboxEventEntity outboxEventEntity) {
         springDataOutboxRepository.saveAndFlush(outboxEventEntity);
+    }
+
+    public List<OutboxEventEntity> findAll() {
+        return springDataOutboxRepository.findAll();
+    }
+
+    public Optional<OutboxEventEntity> findById(UUID id) {
+        return Optional.of(springDataOutboxRepository.getReferenceById(id));
     }
 }

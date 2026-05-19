@@ -1,1 +1,162 @@
 # LmfEventDrivenPlatform
+
+Plataforma distribuída baseada em microsserviços orientados a eventos, projetada para demonstrar arquitetura escalável, resiliente e preparada para ambientes cloud-native.
+
+Este projeto simula um ecossistema de transações financeiras/e-commerce, explorando padrões modernos de engenharia de software como:
+
+- Event-Driven Architecture (EDA)
+- Domain-Driven Design (DDD)
+- Clean Architecture
+- Saga Pattern
+- Outbox Pattern
+- Idempotency
+- Observability
+- Cloud-Native Deployment
+
+---
+
+# Arquitetura
+
+A plataforma é composta por múltiplos microsserviços independentes que se comunicam de forma assíncrona através de eventos.
+
+## Services
+
+### Core Business Services
+
+| Service | Responsabilidade |
+|---------|------------------|
+| AuditService | Auditoria e rastreabilidade de eventos |
+| AuthService | Autenticação, autorização e emissão de JWT |
+| FraudService | Análise e prevenção antifraude |
+| GatewayService | API Gateway e roteamento |
+| InventoryService | Controle e reserva de estoque |
+| NotificationService | Envio de notificações |
+| OrderService | Gestão do ciclo de pedidos |
+| PaymentService | Processamento de pagamentos |
+
+# Details of Services
+
+## Order Service
+Order management microservice built with Domain-Driven Design (DDD) and Clean Architecture principles using Spring Boot.
+
+This project demonstrates production-grade backend patterns including:
+- Transactional Outbox Pattern
+- Apache Kafka integration
+- Idempotent APIs
+- Integration testing with Testcontainers
+- Observability with Prometheus metrics
+- Global exception handling
+- PostgreSQL persistence with Flyway migrations
+
+---
+
+## Payment Service
+
+---
+
+## Notification Service
+
+---
+
+## Inventory Service
+
+---
+
+## Gateway Service
+
+---
+
+## Fraud Service
+
+---
+
+## Auth Service
+
+---
+
+## Audit Service
+
+---
+
+# Stack Tecnológica
+
+## Backend
+
+- Java 17
+- Kotlin
+- Spring Boot 3
+- Spring Web
+- Spring Security
+- Spring Data JPA
+- Spring Cloud
+- Spring Batch
+- Hibernate
+
+## Mensageria e Event Streaming
+
+- Apache Kafka
+
+Padrões aplicados:
+
+- Transactional Outbox
+- Dead Letter Queue (DLQ)
+- Retry Pattern
+- Idempotency
+
+## Banco de Dados
+
+- PostgreSQL
+- Redis
+
+## Infraestrutura
+
+- Docker
+- Docker Compose
+- Kubernetes
+
+## Observabilidade
+
+- Prometheus
+- Grafana
+- OpenTelemetry
+
+## Testes
+
+- JUnit 5
+- Mockito
+- Testcontainers
+
+---
+
+# Estrutura do Monorepo
+
+```text
+LmfEventDrivenPlatform/
+├── services/
+│   ├── AuditService/
+│   ├── AuthService/
+│   ├── FraudService/
+│   ├── GatewayService/
+│   ├── InventoryService/
+│   ├── NotificationService/
+│   ├── OrderService/
+│   └── PaymentService/
+│
+├── shared/
+│   ├── events/
+│   ├── contracts/
+│   ├── schemas/
+│   └── libraries/
+│
+├── infrastructure/
+│   ├── docker/
+│   ├── kubernetes/
+│   ├── terraform/
+│   └── monitoring/
+│
+├── scripts/
+└── docs/
+```
+
+# Author
+Developed by Leandro Menegazzo Franceschetto.

@@ -27,10 +27,15 @@ CREATE TABLE outbox_events (
     event_type VARCHAR(100) NOT NULL,
     payload TEXT NOT NULL,
     outbox_status VARCHAR(50) NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    retry_count INTEGER NOT NULL DEFAULT 0,
+    error_message VARCHAR(300)
 );
 
 CREATE INDEX idx_orders_customer_id
+ON orders(order_status);
+
+CREATE INDEX idx_orders_status
 ON orders(customer_id);
 
 CREATE INDEX idx_outbox_status

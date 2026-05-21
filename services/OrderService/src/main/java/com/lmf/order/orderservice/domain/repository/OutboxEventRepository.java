@@ -1,6 +1,6 @@
 package com.lmf.order.orderservice.domain.repository;
 
-import com.lmf.order.orderservice.domain.model.OutboxStatus;
+import com.lmf.order.orderservice.domain.model.outbox.OutboxStatus;
 import com.lmf.order.orderservice.infrastructure.persistence.entity.OutboxEventEntity;
 
 import java.util.List;

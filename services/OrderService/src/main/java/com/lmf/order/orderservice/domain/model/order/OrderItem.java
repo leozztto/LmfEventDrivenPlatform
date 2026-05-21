@@ -1,4 +1,4 @@
-package com.lmf.order.orderservice.domain.model;
+package com.lmf.order.orderservice.domain.model.order;
 
 import com.lmf.order.orderservice.domain.exception.InvalidQuantityException;
 import com.lmf.order.orderservice.domain.exception.InvalidUnitPriceException;

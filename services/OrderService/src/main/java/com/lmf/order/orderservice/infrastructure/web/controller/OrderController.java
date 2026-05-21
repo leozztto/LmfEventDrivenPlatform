@@ -2,6 +2,7 @@ package com.lmf.order.orderservice.infrastructure.web.controller;
 
 import com.lmf.order.orderservice.application.usecase.CreateOrderUseCase;
 import com.lmf.order.orderservice.application.usecase.command.CreateOrderCommand;
+import com.lmf.order.orderservice.domain.model.payment.PaymentMethod;
 import com.lmf.order.orderservice.infrastructure.web.request.CreateOrderRequest;
 import com.lmf.order.orderservice.infrastructure.web.response.CreateOrderResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -31,11 +32,21 @@ public class OrderController {
 
         var result = createOrderUseCase.execute(command);
 
-        return new CreateOrderResponse(result.orderId(), result.status(), result.totalAmount());
+        return new CreateOrderResponse(result.orderId(), result.status(), result.totalAmount(), result.createdAt());
     }
 
-    private CreateOrderCommand toCommand(String idempotencyKey, CreateOrderRequest request) {
+    private CreateOrderCommand toCommand(String idempotencyKey, CreateOrderRequest createOrderRequest) {
 
-        return new CreateOrderCommand(idempotencyKey, request.getCustomerId(), request.getItems().stream().map(item -> new CreateOrderCommand.OrderItemCommand(item.getProductId(), item.getQuantity(), item.getUnitPrice())).toList());
+        return new CreateOrderCommand(
+
+                idempotencyKey,
+
+                new CreateOrderCommand.CustomerCommand(createOrderRequest.customer().customerId(), createOrderRequest.customer().name(), createOrderRequest.customer().email(), createOrderRequest.customer().phone()),
+
+                new CreateOrderCommand.ShippingAddressCommand(createOrderRequest.shippingAddress().street(), createOrderRequest.shippingAddress().number(), createOrderRequest.shippingAddress().city(), createOrderRequest.shippingAddress().zipCode(), createOrderRequest.shippingAddress().country()),
+
+                new CreateOrderCommand.PaymentCommand(PaymentMethod.fromName(createOrderRequest.payment().paymentMethod()), createOrderRequest.payment().installments(), createOrderRequest.payment().amount()),
+
+                createOrderRequest.items().stream().map(item -> new CreateOrderCommand.OrderItemCommand(item.productId(), item.quantity(), item.unitPrice())).toList());
     }
 }

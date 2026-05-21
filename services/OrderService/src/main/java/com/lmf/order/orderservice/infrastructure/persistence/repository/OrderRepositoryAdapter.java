@@ -1,8 +1,7 @@
 package com.lmf.order.orderservice.infrastructure.persistence.repository;
 
-import com.lmf.order.orderservice.domain.model.Order;
+import com.lmf.order.orderservice.domain.model.order.Order;
 import com.lmf.order.orderservice.domain.repository.OrderRepository;
-import com.lmf.order.orderservice.infrastructure.persistence.entity.OrderEntity;
 import com.lmf.order.orderservice.infrastructure.persistence.mapper.OrderEntityMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;

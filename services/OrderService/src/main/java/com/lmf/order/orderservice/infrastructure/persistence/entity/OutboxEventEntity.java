@@ -1,6 +1,6 @@
 package com.lmf.order.orderservice.infrastructure.persistence.entity;
 
-import com.lmf.order.orderservice.domain.model.OutboxStatus;
+import com.lmf.order.orderservice.domain.model.outbox.OutboxStatus;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;

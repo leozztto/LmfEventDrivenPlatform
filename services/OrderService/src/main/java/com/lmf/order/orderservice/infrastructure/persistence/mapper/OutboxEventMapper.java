@@ -1,6 +1,6 @@
 package com.lmf.order.orderservice.infrastructure.persistence.mapper;
 
-import com.lmf.order.orderservice.domain.model.OutboxEvent;
+import com.lmf.order.orderservice.domain.model.outbox.OutboxEvent;
 import com.lmf.order.orderservice.infrastructure.persistence.entity.OutboxEventEntity;
 import org.springframework.stereotype.Component;
 

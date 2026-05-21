@@ -3,38 +3,16 @@ package com.lmf.order.orderservice.infrastructure.web.request;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.util.List;
-import java.util.UUID;
 
-@Getter
-@NoArgsConstructor
-public class CreateOrderRequest {
+public record CreateOrderRequest(
 
-    @NotNull
-    private UUID customerId;
+        @Valid @NotNull CustomerRequest customer,
 
-    @Valid
-    @NotEmpty
-    private List<OrderItemRequest> items;
+        @Valid @NotNull ShippingAddressRequest shippingAddress,
 
-    @Getter
-    @NoArgsConstructor
-    public static class OrderItemRequest {
+        @Valid @NotNull PaymentRequest payment,
 
-        @NotNull
-        private UUID productId;
-
-        @NotNull
-        @Positive
-        private Integer quantity;
-
-        @NotNull
-        @Positive
-        private BigDecimal unitPrice;
-    }
+        @Valid @NotEmpty List<OrderItemRequest> items) {
 }

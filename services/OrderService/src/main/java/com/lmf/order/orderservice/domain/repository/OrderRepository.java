@@ -1,6 +1,6 @@
 package com.lmf.order.orderservice.domain.repository;
 
-import com.lmf.order.orderservice.domain.model.Order;
+import com.lmf.order.orderservice.domain.model.order.Order;
 
 import java.util.List;
 import java.util.Optional;

@@ -4,12 +4,18 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lmf.order.orderservice.application.usecase.CreateOrderUseCase;
 import com.lmf.order.orderservice.application.usecase.command.CreateOrderCommand;
+import com.lmf.order.orderservice.application.usecase.mapper.CreateOrderCommandMapper;
 import com.lmf.order.orderservice.application.usecase.result.CreateOrderResult;
 import com.lmf.order.orderservice.domain.exception.OrderNotFoundException;
-import com.lmf.order.orderservice.domain.model.Order;
-import com.lmf.order.orderservice.domain.model.OrderItem;
+import com.lmf.order.orderservice.domain.model.customer.CustomerInfo;
+import com.lmf.order.orderservice.domain.model.customer.ShippingAddress;
+import com.lmf.order.orderservice.domain.model.order.Order;
+import com.lmf.order.orderservice.domain.model.order.OrderItem;
+import com.lmf.order.orderservice.domain.model.payment.PaymentInfo;
+import com.lmf.order.orderservice.domain.model.payment.PaymentMethod;
 import com.lmf.order.orderservice.domain.repository.OrderRepository;
 import com.lmf.order.orderservice.domain.repository.OutboxEventRepository;
+import com.lmf.order.orderservice.infrastructure.messaging.mapper.OrderCreatedEventMapper;
 import com.lmf.order.orderservice.infrastructure.persistence.entity.IdempotencyEntity;
 import com.lmf.order.orderservice.infrastructure.persistence.entity.OutboxEventEntity;
 import com.lmf.order.orderservice.infrastructure.persistence.repository.IdempotencyRepositoryAdapter;
@@ -44,6 +50,12 @@ class CreateOrderUseCaseTest {
     @Mock
     private ObjectMapper objectMapper;
 
+    @Mock
+    private CreateOrderCommandMapper createOrderCommandMapper;
+
+    @Mock
+    private OrderCreatedEventMapper orderCreatedEventMapper;
+
     @InjectMocks
     private CreateOrderUseCase createOrderUseCase;
 
@@ -52,14 +64,35 @@ class CreateOrderUseCaseTest {
 
         String idempotencyKey = "testIntegration";
         UUID customerUUID = UUID.randomUUID();
+        UUID productUUID = UUID.randomUUID();
 
-        CreateOrderCommand command = new CreateOrderCommand(idempotencyKey, customerUUID, List.of(new CreateOrderCommand.OrderItemCommand(UUID.randomUUID(), 2, BigDecimal.TEN)));
+        CreateOrderCommand command = new CreateOrderCommand(
+
+                idempotencyKey,
+
+                new CreateOrderCommand.CustomerCommand(customerUUID, "Leandro", "leandro@email.com", "11999999999"),
+
+                new CreateOrderCommand.ShippingAddressCommand("Rua XPTO", "100", "São Paulo", "01000000", "BR"),
+
+                new CreateOrderCommand.PaymentCommand(PaymentMethod.BOLETO, 3, new BigDecimal(100)),
+
+                List.of(new CreateOrderCommand.OrderItemCommand(productUUID, 2, BigDecimal.TEN)));
 
         when(idempotencyRepositoryAdapter.findByKey(idempotencyKey)).thenReturn(Optional.empty());
 
         when(objectMapper.writeValueAsString(any())).thenReturn("{json}");
 
-        Order savedOrder = new Order(command.customerId(), List.of(new OrderItem(UUID.randomUUID(), 2, BigDecimal.valueOf(100))));
+        Order savedOrder = new Order(
+
+                new CustomerInfo(command.customer().customerId(), command.customer().name(), command.customer().email(), command.customer().phone()),
+
+                new ShippingAddress(command.shippingAddress().street(), command.shippingAddress().number(), command.shippingAddress().city(), command.shippingAddress().zipCode(), command.shippingAddress().country()),
+
+                new PaymentInfo(command.payment().paymentMethod(), command.payment().installments(), command.payment().paidAmount()),
+
+                List.of(new OrderItem(UUID.randomUUID(), 2, BigDecimal.valueOf(100))));
+
+        when(createOrderCommandMapper.toDomain(any(CreateOrderCommand.class))).thenReturn(savedOrder);
 
         when(orderRepository.save(any(Order.class))).thenReturn(savedOrder);
 
@@ -84,11 +117,29 @@ class CreateOrderUseCaseTest {
         UUID customerUUID = UUID.randomUUID();
         UUID productUUID = UUID.randomUUID();
 
-        CreateOrderCommand command = new CreateOrderCommand(idempotencyKey, customerUUID, List.of(new CreateOrderCommand.OrderItemCommand(UUID.randomUUID(), 2, BigDecimal.TEN)));
+        CreateOrderCommand command = new CreateOrderCommand(
+
+                idempotencyKey,
+
+                new CreateOrderCommand.CustomerCommand(customerUUID, "Leandro", "leandro@email.com", "11999999999"),
+
+                new CreateOrderCommand.ShippingAddressCommand("Rua XPTO", "100", "São Paulo", "01000000", "BR"),
+
+                new CreateOrderCommand.PaymentCommand(PaymentMethod.APPLE_PAY, 3, new BigDecimal(100)),
+
+                List.of(new CreateOrderCommand.OrderItemCommand(productUUID, 2, BigDecimal.TEN)));
 
         when(idempotencyRepositoryAdapter.findByKey(idempotencyKey)).thenReturn(Optional.of(new IdempotencyEntity(idempotencyKey, orderId)));
 
-        Order existingOrder = new Order(UUID.randomUUID(), List.of(new OrderItem(productUUID, 1, BigDecimal.valueOf(10))));
+        Order existingOrder = new Order(
+
+                new CustomerInfo(command.customer().customerId(), command.customer().name(), command.customer().email(), command.customer().phone()),
+
+                new ShippingAddress(command.shippingAddress().street(), command.shippingAddress().number(), command.shippingAddress().city(), command.shippingAddress().zipCode(), command.shippingAddress().country()),
+
+                new PaymentInfo(command.payment().paymentMethod(), command.payment().installments(), command.payment().paidAmount()),
+
+                List.of(new OrderItem(UUID.randomUUID(), 2, BigDecimal.valueOf(100))));
 
         when(orderRepository.findById(orderId)).thenReturn(Optional.of(existingOrder));
 
@@ -106,10 +157,33 @@ class CreateOrderUseCaseTest {
 
         String idempotencyKey = "testIntegration";
         UUID customerUUID = UUID.randomUUID();
+        UUID productUUID = UUID.randomUUID();
 
-        CreateOrderCommand command = new CreateOrderCommand(idempotencyKey, customerUUID, List.of(new CreateOrderCommand.OrderItemCommand(UUID.randomUUID(), 2, BigDecimal.TEN)));
+        CreateOrderCommand command = new CreateOrderCommand(
+
+                idempotencyKey,
+
+                new CreateOrderCommand.CustomerCommand(customerUUID, "Leandro", "leandro@email.com", "11999999999"),
+
+                new CreateOrderCommand.ShippingAddressCommand("Rua XPTO", "100", "São Paulo", "01000000", "BR"),
+
+                new CreateOrderCommand.PaymentCommand(PaymentMethod.PIX, 3, new BigDecimal(100)),
+
+                List.of(new CreateOrderCommand.OrderItemCommand(productUUID, 2, BigDecimal.TEN)));
 
         when(idempotencyRepositoryAdapter.findByKey(any())).thenReturn(Optional.empty());
+
+        Order savedOrder = new Order(
+
+                new CustomerInfo(command.customer().customerId(), command.customer().name(), command.customer().email(), command.customer().phone()),
+
+                new ShippingAddress(command.shippingAddress().street(), command.shippingAddress().number(), command.shippingAddress().city(), command.shippingAddress().zipCode(), command.shippingAddress().country()),
+
+                new PaymentInfo(command.payment().paymentMethod(), command.payment().installments(), command.payment().paidAmount()),
+
+                List.of(new OrderItem(UUID.randomUUID(), 2, BigDecimal.valueOf(100))));
+
+        when(createOrderCommandMapper.toDomain(any(CreateOrderCommand.class))).thenReturn(savedOrder);
 
         when(orderRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -121,9 +195,22 @@ class CreateOrderUseCaseTest {
     @Test
     void shouldThrowOrderNotFoundException() {
 
+        String idempotencyKey = "testIntegration";
+        UUID customerUUID = UUID.randomUUID();
         UUID orderId = UUID.randomUUID();
+        UUID productUUID = UUID.randomUUID();
 
-        CreateOrderCommand command = new CreateOrderCommand(UUID.randomUUID().toString(), UUID.randomUUID(), List.of());
+        CreateOrderCommand command = new CreateOrderCommand(
+
+                idempotencyKey,
+
+                new CreateOrderCommand.CustomerCommand(customerUUID, "Leandro", "leandro@email.com", "11999999999"),
+
+                new CreateOrderCommand.ShippingAddressCommand("Rua XPTO", "100", "São Paulo", "01000000", "BR"),
+
+                new CreateOrderCommand.PaymentCommand(PaymentMethod.CREDIT_CARD, 3, new BigDecimal(100)),
+
+                List.of(new CreateOrderCommand.OrderItemCommand(productUUID, 2, BigDecimal.TEN)));
 
         when(idempotencyRepositoryAdapter.findByKey(any())).thenReturn(Optional.of(new IdempotencyEntity("idem-key", orderId)));
 

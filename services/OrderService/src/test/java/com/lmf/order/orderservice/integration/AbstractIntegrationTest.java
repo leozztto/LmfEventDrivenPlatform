@@ -16,11 +16,6 @@ public abstract class AbstractIntegrationTest {
 
     static KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.0"));
 
-    static {
-        postgres.start();
-        kafka.start();
-    }
-
     @DynamicPropertySource
     static void configure(DynamicPropertyRegistry registry) {
 

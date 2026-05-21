@@ -3,12 +3,16 @@ package com.lmf.order.orderservice.integration;
 import com.lmf.order.orderservice.application.usecase.CreateOrderUseCase;
 import com.lmf.order.orderservice.application.usecase.command.CreateOrderCommand;
 import com.lmf.order.orderservice.application.usecase.result.CreateOrderResult;
-import com.lmf.order.orderservice.domain.model.Order;
+import com.lmf.order.orderservice.domain.model.order.Order;
+import com.lmf.order.orderservice.domain.model.payment.PaymentMethod;
 import com.lmf.order.orderservice.domain.repository.OrderRepository;
 import com.lmf.order.orderservice.domain.repository.OutboxEventRepository;
 import com.lmf.order.orderservice.infrastructure.persistence.entity.IdempotencyEntity;
 import com.lmf.order.orderservice.infrastructure.persistence.entity.OutboxEventEntity;
 import com.lmf.order.orderservice.infrastructure.persistence.repository.IdempotencyRepositoryAdapter;
+import com.lmf.order.orderservice.infrastructure.persistence.repository.SpringDataIdempotencyRepository;
+import com.lmf.order.orderservice.infrastructure.persistence.repository.SpringDataOrderRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -37,13 +41,35 @@ class CreateOrderUseCaseIT {
     @Autowired
     private IdempotencyRepositoryAdapter idempotencyRepositoryAdapter;
 
+    @Autowired
+    private SpringDataIdempotencyRepository springDataIdempotencyRepository;
+
+    @Autowired
+    private SpringDataOrderRepository springDataOrderRepository;
+
+    @BeforeEach
+    void setup() {
+        springDataOrderRepository.deleteAll();
+        springDataIdempotencyRepository.deleteAll();
+    }
+
     @Test
     void shouldCreateOrderAndPersistOutboxEvent() {
 
         String idempotencyKey = "testIntegration";
         UUID customerUUID = UUID.randomUUID();
 
-        CreateOrderCommand command = new CreateOrderCommand(idempotencyKey, customerUUID, List.of(new CreateOrderCommand.OrderItemCommand(UUID.randomUUID(), 2, BigDecimal.TEN)));
+        CreateOrderCommand command = new CreateOrderCommand(
+
+                idempotencyKey,
+
+                new CreateOrderCommand.CustomerCommand(customerUUID, "Leandro", "leandro@email.com", "11999999999"),
+
+                new CreateOrderCommand.ShippingAddressCommand("Rua XPTO", "100", "São Paulo", "01000000", "BR"),
+
+                new CreateOrderCommand.PaymentCommand(PaymentMethod.PAYPAL, 3, new BigDecimal(10)),
+
+                List.of(new CreateOrderCommand.OrderItemCommand(UUID.randomUUID(), 2, BigDecimal.TEN)));
 
         CreateOrderResult createOrderResult = createOrderUseCase.execute(command);
 
@@ -68,7 +94,17 @@ class CreateOrderUseCaseIT {
         String idempotencyKey = "testIntegration";
         UUID customerUUID = UUID.randomUUID();
 
-        CreateOrderCommand command = new CreateOrderCommand(idempotencyKey, customerUUID, List.of(new CreateOrderCommand.OrderItemCommand(UUID.randomUUID(), 2, BigDecimal.TEN)));
+        CreateOrderCommand command = new CreateOrderCommand(
+
+                idempotencyKey,
+
+                new CreateOrderCommand.CustomerCommand(customerUUID, "Leandro", "leandro@email.com", "11999999999"),
+
+                new CreateOrderCommand.ShippingAddressCommand("Rua XPTO", "100", "São Paulo", "01000000", "BR"),
+
+                new CreateOrderCommand.PaymentCommand(PaymentMethod.BOLETO, 3, new BigDecimal(5)),
+
+                List.of(new CreateOrderCommand.OrderItemCommand(UUID.randomUUID(), 2, BigDecimal.TEN)));
 
         CreateOrderResult firstResult = createOrderUseCase.execute(command);
 

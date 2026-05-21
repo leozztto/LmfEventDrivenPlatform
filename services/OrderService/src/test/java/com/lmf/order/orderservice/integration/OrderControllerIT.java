@@ -7,6 +7,8 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
+import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -20,7 +22,16 @@ public class OrderControllerIT extends AbstractIntegrationTest {
     @Test
     void shouldCreateOrderSuccessfully() {
 
-        Map<String, Object> requestBody = Map.of("customerId", UUID.randomUUID(), "items", java.util.List.of(Map.of("productId", UUID.randomUUID(), "quantity", 2, "unitPrice", 100)));
+        Map<String, Object> customer = Map.of("customerId", UUID.randomUUID(), "name", "João Silva", "email", "joao.silva@email.com", "phone", "(11) 99999-9999");
+
+        Map<String, Object> shippingAddress = Map.of("street", "Rua das Flores", "number", "123", "city", "São Paulo", "zipCode", "01234-567", "country", "Brasil");
+
+        Map<String, Object> payment = Map.of("paymentMethod", "CREDIT_CARD", "installments", 3, "amount", new BigDecimal("200.00"));
+
+        Map<String, Object> item1 = Map.of("productId", UUID.randomUUID(), "quantity", 2, "unitPrice", new BigDecimal("100.00"));
+
+        Map<String, Object> requestBody = Map.of("customer", customer, "shippingAddress", shippingAddress, "payment", payment, "items", List.of(item1));
+
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("Idempotency-Key", UUID.randomUUID().toString());

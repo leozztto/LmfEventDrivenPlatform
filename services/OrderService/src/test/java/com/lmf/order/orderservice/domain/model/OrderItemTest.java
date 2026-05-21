@@ -2,6 +2,7 @@ package com.lmf.order.orderservice.domain.model;
 
 import com.lmf.order.orderservice.domain.exception.InvalidQuantityException;
 import com.lmf.order.orderservice.domain.exception.InvalidUnitPriceException;
+import com.lmf.order.orderservice.domain.model.order.OrderItem;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

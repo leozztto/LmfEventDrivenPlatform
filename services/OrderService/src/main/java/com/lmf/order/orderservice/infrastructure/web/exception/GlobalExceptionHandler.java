@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -90,6 +91,14 @@ public class GlobalExceptionHandler {
         log.error("Unexpected error. path={}", request.getRequestURI(), ex);
 
         return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", "Unexpected internal error", request.getRequestURI(), null);
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<ErrorResponse> handleMissingHeader(MissingRequestHeaderException ex, HttpServletRequest request) {
+
+        log.warn("Missing request header. path={}, header={}", request.getRequestURI(), ex.getHeaderName());
+
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "MISSING_HEADER", ex.getMessage(), request.getRequestURI(), null);
     }
 
     private ResponseEntity<ErrorResponse> buildErrorResponse(HttpStatus status, String error, String message, String path, List<ErrorResponse.FieldErrorResponse> fieldErrors) {

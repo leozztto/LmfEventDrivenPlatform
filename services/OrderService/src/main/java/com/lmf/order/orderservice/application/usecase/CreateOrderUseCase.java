@@ -63,7 +63,12 @@ public class CreateOrderUseCase {
         log.info("Order created successfully. orderId={}, totalAmount={}, status={}", savedOrder.getId(), savedOrder.getTotalAmount(), savedOrder.getOrderStatus());
 
         try {
+
             idempotencyRepositoryAdapter.save(new IdempotencyEntity(command.idempotencyKey(), savedOrder.getId()));
+
+            log.info("idEmpotency created successfully, key={}", command.idempotencyKey());
+
+
         } catch (DataIntegrityViolationException e) {
 
             IdempotencyEntity fallback = idempotencyRepositoryAdapter.findByKey(command.idempotencyKey()).orElseThrow();
@@ -89,6 +94,8 @@ public class CreateOrderUseCase {
             OutboxEventEntity event = new OutboxEventEntity(order.getId(), "ORDER", "ORDER_CREATED", payload, OutboxStatus.PENDING);
 
             outboxEventRepository.save(event);
+
+            log.info("Outbox created successfully. eventId={}, payload={}", event.getId(), event.getPayload());
 
         } catch (JsonProcessingException ex) {
 

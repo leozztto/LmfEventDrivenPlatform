@@ -32,7 +32,7 @@ public class CreateOrderUseCase {
 
     private final OutboxEventRepository outboxEventRepository;
 
-    private final IdempotencyRepositoryAdapter idempotencyRepository;
+    private final IdempotencyRepositoryAdapter idempotencyRepositoryAdapter;
 
     private final ObjectMapper objectMapper;
 
@@ -45,7 +45,7 @@ public class CreateOrderUseCase {
 
         log.info("Creating order. customerInfo={}, shippingAddress={}, payment={}, totalItems={}", command.customer(), command.shippingAddress(), command.payment(), command.items().size());
 
-        Optional<IdempotencyEntity> existing = idempotencyRepository.findByKey(command.idempotencyKey());
+        Optional<IdempotencyEntity> existing = idempotencyRepositoryAdapter.findByKey(command.idempotencyKey());
 
         if (existing.isPresent()) {
 
@@ -63,10 +63,10 @@ public class CreateOrderUseCase {
         log.info("Order created successfully. orderId={}, totalAmount={}, status={}", savedOrder.getId(), savedOrder.getTotalAmount(), savedOrder.getOrderStatus());
 
         try {
-            idempotencyRepository.save(new IdempotencyEntity(command.idempotencyKey(), savedOrder.getId()));
+            idempotencyRepositoryAdapter.save(new IdempotencyEntity(command.idempotencyKey(), savedOrder.getId()));
         } catch (DataIntegrityViolationException e) {
 
-            IdempotencyEntity fallback = idempotencyRepository.findByKey(command.idempotencyKey()).orElseThrow();
+            IdempotencyEntity fallback = idempotencyRepositoryAdapter.findByKey(command.idempotencyKey()).orElseThrow();
 
             Order orderError = orderRepository.findById(fallback.getOrderId()).orElseThrow(() -> new OrderNotFoundException(fallback.getOrderId()));
 

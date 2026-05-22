@@ -52,7 +52,7 @@ public final class TestDataFactory {
 
         return new CreateOrderCommand(
 
-                "idem-123",
+                "testIntegration",
 
                 new CreateOrderCommand.CustomerCommand(UUID.randomUUID(), "Leandro", "leandro@email.com", "11999999999"),
 

@@ -9,7 +9,11 @@ public record ProcessPaymentCommand(
 
         UUID orderId,
 
+        UUID customerId,
+
         BigDecimal amount,
+
+        String currency,
 
         PaymentMethod paymentMethod,
 

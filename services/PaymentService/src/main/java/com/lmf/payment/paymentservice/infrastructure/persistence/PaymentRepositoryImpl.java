@@ -7,6 +7,9 @@ import com.lmf.payment.paymentservice.ports.output.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+import java.util.UUID;
+
 @Repository
 @RequiredArgsConstructor
 public class PaymentRepositoryImpl implements PaymentRepository {
@@ -17,5 +20,11 @@ public class PaymentRepositoryImpl implements PaymentRepository {
     public void save(Payment payment) {
 
         springDataPaymentRepository.save(PaymentEntityMapper.toEntity(payment));
+    }
+
+    @Override
+    public Optional<Payment> findByOrderId(UUID orderId) {
+
+        return springDataPaymentRepository.findByOrderId(orderId).map(PaymentEntityMapper::toDomain);
     }
 }

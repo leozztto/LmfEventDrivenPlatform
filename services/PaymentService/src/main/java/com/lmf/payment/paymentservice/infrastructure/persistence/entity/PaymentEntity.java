@@ -23,7 +23,11 @@ public class PaymentEntity {
 
     private UUID orderId;
 
+    private UUID customerId;
+
     private BigDecimal amount;
+
+    private String currency;
 
     @Enumerated(EnumType.STRING)
     private PaymentMethod paymentMethod;
@@ -33,5 +37,15 @@ public class PaymentEntity {
     @Enumerated(EnumType.STRING)
     private PaymentStatus status;
 
+    private String provider;
+
+    private String transactionId;
+
+    private String gatewayStatus;
+
     private OffsetDateTime createdAt;
+
+    private OffsetDateTime paidAt;
+
+    private OffsetDateTime failedAt;
 }

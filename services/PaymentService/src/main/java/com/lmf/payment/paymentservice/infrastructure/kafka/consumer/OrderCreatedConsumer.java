@@ -6,6 +6,8 @@ import com.lmf.payment.paymentservice.events.OrderCreatedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.annotation.RetryableTopic;
+import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -15,16 +17,14 @@ public class OrderCreatedConsumer {
 
     private final ProcessPaymentUseCase processPaymentUseCase;
 
-    @KafkaListener(
-            topics = "order.created",
-            containerFactory = "kafkaListenerContainerFactory"
-    )
+    @RetryableTopic(attempts = "3", backoff = @Backoff(delay = 2000, multiplier = 2.0), dltTopicSuffix = ".DLT")
+    @KafkaListener(topics = "order.created", containerFactory = "kafkaListenerContainerFactory")
     public void consume(OrderCreatedEvent orderCreatedEvent) {
 
         log.info("Received order created event. orderId={}", orderCreatedEvent.orderId());
 
-        ProcessPaymentCommand command = new ProcessPaymentCommand(orderCreatedEvent.orderId(), orderCreatedEvent.totalAmount(), orderCreatedEvent.payment().paymentMethod(), orderCreatedEvent.payment().installments());
+        ProcessPaymentCommand processPaymentCommand = new ProcessPaymentCommand(orderCreatedEvent.orderId(), orderCreatedEvent.customer().customerId(), orderCreatedEvent.totalAmount(), "BRL", orderCreatedEvent.payment().paymentMethod(), orderCreatedEvent.payment().installments());
 
-        processPaymentUseCase.execute(command);
+        processPaymentUseCase.execute(processPaymentCommand);
     }
 }

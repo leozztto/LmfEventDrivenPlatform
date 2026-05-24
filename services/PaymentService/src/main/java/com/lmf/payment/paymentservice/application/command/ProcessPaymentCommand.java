@@ -1,6 +1,6 @@
 package com.lmf.payment.paymentservice.application.command;
 
-import com.lmf.payment.paymentservice.domain.PaymentMethod;
+import com.lmf.payment.paymentservice.domain.model.PaymentMethod;
 
 import java.math.BigDecimal;
 import java.util.UUID;

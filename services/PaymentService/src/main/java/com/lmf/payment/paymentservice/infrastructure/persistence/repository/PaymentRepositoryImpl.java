@@ -1,9 +1,8 @@
-package com.lmf.payment.paymentservice.infrastructure.persistence;
+package com.lmf.payment.paymentservice.infrastructure.persistence.repository;
 
-import com.lmf.payment.paymentservice.domain.Payment;
+import com.lmf.payment.paymentservice.domain.model.Payment;
 import com.lmf.payment.paymentservice.infrastructure.persistence.mapper.PaymentEntityMapper;
-import com.lmf.payment.paymentservice.infrastructure.persistence.repository.SpringDataPaymentRepository;
-import com.lmf.payment.paymentservice.ports.output.PaymentRepository;
+import com.lmf.payment.paymentservice.domain.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -16,10 +15,12 @@ public class PaymentRepositoryImpl implements PaymentRepository {
 
     private final SpringDataPaymentRepository springDataPaymentRepository;
 
-    @Override
-    public void save(Payment payment) {
+    private final PaymentEntityMapper paymentEntityMapper;
 
-        springDataPaymentRepository.save(PaymentEntityMapper.toEntity(payment));
+    @Override
+    public Payment save(Payment payment) {
+
+        return PaymentEntityMapper.toDomain(springDataPaymentRepository.save(PaymentEntityMapper.toEntity(payment)));
     }
 
     @Override

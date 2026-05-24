@@ -1,18 +1,21 @@
 package com.lmf.payment.paymentservice.application.usecase;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lmf.payment.paymentservice.application.command.ProcessPaymentCommand;
-import com.lmf.payment.paymentservice.domain.Payment;
-import com.lmf.payment.paymentservice.domain.PaymentStatus;
-import com.lmf.payment.paymentservice.events.PaymentCreatedEvent;
-import com.lmf.payment.paymentservice.ports.output.PaymentEventPublisher;
-import com.lmf.payment.paymentservice.ports.output.PaymentRepository;
+import com.lmf.payment.paymentservice.domain.model.Payment;
+import com.lmf.payment.paymentservice.application.event.PaymentCreatedEvent;
+import com.lmf.payment.paymentservice.domain.repository.PaymentRepository;
+import com.lmf.payment.paymentservice.infrastructure.mapper.PaymentCreatedEventMapper;
+import com.lmf.payment.paymentservice.infrastructure.outbox.OutboxStatus;
+import com.lmf.payment.paymentservice.infrastructure.persistence.entity.OutboxEventEntity;
+import com.lmf.payment.paymentservice.infrastructure.persistence.mapper.PaymentEntityMapper;
+import com.lmf.payment.paymentservice.domain.repository.OutboxEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.OffsetDateTime;
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -21,28 +24,51 @@ public class ProcessPaymentUseCase {
 
     private final PaymentRepository paymentRepository;
 
-    private final PaymentEventPublisher paymentEventPublisher;
+    private final PaymentCreatedEventMapper paymentCreatedEventMapper;
+
+    private final OutboxEventRepository outboxEventRepository;
+
+    private final PaymentEntityMapper paymentEntityMapper;
+
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public void execute(ProcessPaymentCommand processPaymentCommand) {
 
-        boolean paymentAlreadyExists = paymentRepository.findByOrderId(processPaymentCommand.orderId()).isPresent();
+        log.info("Creating payment. orderId={}, amount={}, paymentMethod={}, installments={}", processPaymentCommand.orderId(), processPaymentCommand.amount(), processPaymentCommand.paymentMethod(), processPaymentCommand.installments());
 
-        if (paymentAlreadyExists) {
+        paymentRepository.findByOrderId(processPaymentCommand.orderId()).ifPresent(payment -> {
 
-            log.warn("Payment already exists for orderId={}", processPaymentCommand.orderId());
+            throw new IllegalStateException("Payment already exists");
+        });
 
-            return;
-        }
-
-        Payment payment = Payment.builder().id(UUID.randomUUID()).orderId(processPaymentCommand.orderId()).customerId(processPaymentCommand.customerId()).amount(processPaymentCommand.amount()).currency(processPaymentCommand.currency()).paymentMethod(processPaymentCommand.paymentMethod()).installments(processPaymentCommand.installments()).status(PaymentStatus.PENDING).provider("MERCADO_PAGO").gatewayStatus("PROCESSING").createdAt(OffsetDateTime.now()).build();
+        Payment payment = PaymentEntityMapper.toDomain(processPaymentCommand);
 
         paymentRepository.save(payment);
 
-        PaymentCreatedEvent paymentCreatedEvent = new PaymentCreatedEvent(UUID.randomUUID(), "PAYMENT_CREATED", "1.0", OffsetDateTime.now(), payment.getId(), payment.getOrderId(), payment.getCustomerId(), payment.getAmount(), payment.getCurrency(), payment.getPaymentMethod(), payment.getInstallments(), payment.getStatus(), payment.getProvider(), payment.getTransactionId(), payment.getGatewayStatus());
+        log.info("Payment created successfully. paymentId={}, orderId={}, amount={}", payment.getId(), payment.getOrderId(), payment.getAmount());
 
-        paymentEventPublisher.publish(paymentCreatedEvent);
+        createOutboxEvent(payment);
 
-        log.info("Payment created successfully. paymentId={}, orderId={}", payment.getId(), payment.getOrderId());
+    }
+
+    private void createOutboxEvent(Payment payment) {
+
+        try {
+
+            PaymentCreatedEvent paymentCreatedEvent = paymentCreatedEventMapper.toEvent(payment);
+
+            String payload = objectMapper.writeValueAsString(paymentCreatedEvent);
+
+            OutboxEventEntity outboxEventEntity = new OutboxEventEntity(payment.getId(), "PAYMENT", "PAYMENT_CREATED", payload, OutboxStatus.PENDING);
+
+            outboxEventRepository.save(outboxEventEntity);
+
+            log.info("Outbox created successfully. eventId={}, payload={}", outboxEventEntity.getId(), outboxEventEntity.getPayload());
+
+        } catch (JsonProcessingException ex) {
+
+            throw new RuntimeException("Failed to create outbox event", ex);
+        }
     }
 }

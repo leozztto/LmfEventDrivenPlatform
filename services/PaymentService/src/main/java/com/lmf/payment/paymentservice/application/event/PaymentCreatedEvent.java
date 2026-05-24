@@ -1,7 +1,7 @@
-package com.lmf.payment.paymentservice.events;
+package com.lmf.payment.paymentservice.application.event;
 
-import com.lmf.payment.paymentservice.domain.PaymentMethod;
-import com.lmf.payment.paymentservice.domain.PaymentStatus;
+import com.lmf.payment.paymentservice.domain.model.PaymentMethod;
+import com.lmf.payment.paymentservice.domain.model.PaymentStatus;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -31,7 +31,7 @@ public record PaymentCreatedEvent(
 
         Integer installments,
 
-        PaymentStatus status,
+        PaymentStatus paymentStatus,
 
         String provider,
 

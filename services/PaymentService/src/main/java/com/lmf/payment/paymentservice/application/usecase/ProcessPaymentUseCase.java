@@ -28,8 +28,6 @@ public class ProcessPaymentUseCase {
 
     private final OutboxEventRepository outboxEventRepository;
 
-    private final PaymentEntityMapper paymentEntityMapper;
-
     private final ObjectMapper objectMapper;
 
     @Transactional
@@ -42,7 +40,7 @@ public class ProcessPaymentUseCase {
             throw new IllegalStateException("Payment already exists");
         });
 
-        Payment payment = PaymentEntityMapper.toDomain(processPaymentCommand);
+        Payment payment = Payment.create(processPaymentCommand.orderId(), processPaymentCommand.customerId(), processPaymentCommand.amount(), processPaymentCommand.currency(), processPaymentCommand.paymentMethod(), processPaymentCommand.installments(), "MERCADO_PAGO");
 
         paymentRepository.save(payment);
 

@@ -42,37 +42,103 @@ public class Payment {
     private Payment() {
     }
 
-    public Payment(UUID orderId, UUID customerId, BigDecimal amount, String currency, PaymentMethod paymentMethod, Integer installments, PaymentStatus paymentStatus, String provider, OffsetDateTime createdAt) {
-        this.orderId = orderId;
-        this.customerId = customerId;
-        this.amount = amount;
-        this.currency = currency;
-        this.paymentMethod = paymentMethod;
-        this.installments = installments;
-        this.paymentStatus = PaymentStatus.PENDING;
-        this.provider = provider;
-        this.createdAt = createdAt;
+    public static Payment create(UUID orderId, UUID customerId, BigDecimal amount, String currency, PaymentMethod paymentMethod, Integer installments, String provider) {
 
-        this.validate();
+        Payment payment = new Payment();
+
+        payment.id = UUID.randomUUID();
+        payment.orderId = orderId;
+        payment.customerId = customerId;
+        payment.amount = amount;
+        payment.currency = currency;
+        payment.paymentMethod = paymentMethod;
+        payment.installments = installments;
+        payment.paymentStatus = PaymentStatus.PENDING;
+        payment.provider = provider;
+        payment.gatewayStatus = "PROCESSING";
+        payment.createdAt = OffsetDateTime.now();
+
+        payment.validate();
+
+        return payment;
     }
 
-    public Payment(UUID id, UUID orderId, UUID customerId, BigDecimal amount, String currency, PaymentMethod paymentMethod, Integer installments, PaymentStatus paymentStatus, String provider, String transactionId, String gatewayStatus, OffsetDateTime createdAt, OffsetDateTime paidAt, OffsetDateTime failedAt) {
-        this.id = id;
-        this.orderId = orderId;
-        this.customerId = customerId;
-        this.amount = amount;
-        this.currency = currency;
-        this.paymentMethod = paymentMethod;
-        this.installments = installments;
-        this.paymentStatus = paymentStatus;
-        this.provider = provider;
-        this.transactionId = transactionId;
-        this.gatewayStatus = gatewayStatus;
-        this.createdAt = createdAt;
-        this.paidAt = paidAt;
-        this.failedAt = failedAt;
+    public static Payment restore(UUID id, UUID orderId, UUID customerId, BigDecimal amount, String currency, PaymentMethod paymentMethod, Integer installments, PaymentStatus paymentStatus, String provider, String transactionId, String gatewayStatus, OffsetDateTime createdAt, OffsetDateTime paidAt, OffsetDateTime failedAt) {
 
-        this.validate();
+        Payment payment = new Payment();
+
+        payment.id = id;
+        payment.orderId = orderId;
+        payment.customerId = customerId;
+        payment.amount = amount;
+        payment.currency = currency;
+        payment.paymentMethod = paymentMethod;
+        payment.installments = installments;
+        payment.paymentStatus = paymentStatus;
+        payment.provider = provider;
+        payment.transactionId = transactionId;
+        payment.gatewayStatus = gatewayStatus;
+        payment.createdAt = createdAt;
+        payment.paidAt = paidAt;
+        payment.failedAt = failedAt;
+
+        return payment;
+    }
+
+    public void approve(String transactionId) {
+
+        if (this.paymentStatus != PaymentStatus.PENDING) {
+
+            throw new BusinessException("Only pending payments can be approved");
+        }
+
+        this.paymentStatus = PaymentStatus.APPROVED;
+        this.transactionId = transactionId;
+        this.gatewayStatus = "APPROVED";
+        this.paidAt = OffsetDateTime.now();
+    }
+
+    public void fail() {
+
+        if (this.paymentStatus != PaymentStatus.PENDING) {
+
+            throw new BusinessException("Only pending payments can fail");
+        }
+
+        this.paymentStatus = PaymentStatus.FAILED;
+        this.gatewayStatus = "FAILED";
+        this.failedAt = OffsetDateTime.now();
+    }
+
+    private void validate() {
+
+        validateAmount();
+        validateInstallments();
+        validatePaymentMethodRules();
+    }
+
+    private void validateAmount() {
+
+        if (amount == null || amount.signum() <= 0) {
+
+            throw new InvalidPaymentAmountException();
+        }
+    }
+
+    private void validateInstallments() {
+
+        if (installments != null && installments < 1) {
+
+            throw new InvalidInstallmentsException();
+        }
+    }
+
+    private void validatePaymentMethodRules() {
+
+        if (paymentMethod == PaymentMethod.PIX && installments != null && installments > 1) {
+
+            throw new InvalidPaymentMethodException("PIX payments cannot have installments");
+        }
     }
 
     public UUID getId() {
@@ -129,59 +195,5 @@ public class Payment {
 
     public OffsetDateTime getFailedAt() {
         return failedAt;
-    }
-
-    public void approve(String transactionId) {
-
-        if (this.paymentStatus != PaymentStatus.PENDING) {
-
-            throw new BusinessException("Only pending payments can be approved");
-        }
-
-        this.paymentStatus = PaymentStatus.APPROVED;
-        this.transactionId = transactionId;
-        this.gatewayStatus = "APPROVED";
-        this.paidAt = OffsetDateTime.now();
-    }
-
-    public void fail() {
-
-        if (this.paymentStatus != PaymentStatus.PENDING) {
-
-            throw new BusinessException("Only pending payments can fail");
-        }
-
-        this.paymentStatus = PaymentStatus.FAILED;
-        this.gatewayStatus = "FAILED";
-        this.failedAt = OffsetDateTime.now();
-    }
-
-    private void validate() {
-
-        validateAmount();
-        validateInstallments();
-        validatePaymentMethodRules();
-    }
-
-    private void validateAmount() {
-
-        if (amount == null || amount.signum() <= 0) {
-            throw new InvalidPaymentAmountException();
-        }
-    }
-
-    private void validateInstallments() {
-
-        if (installments != null && installments < 1) {
-            throw new InvalidInstallmentsException();
-        }
-    }
-
-    private void validatePaymentMethodRules() {
-
-        if (paymentMethod == PaymentMethod.PIX && installments != null && installments > 1) {
-
-            throw new InvalidPaymentMethodException("PIX payments cannot have installments");
-        }
     }
 }

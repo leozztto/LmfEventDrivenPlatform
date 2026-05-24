@@ -15,8 +15,6 @@ public class PaymentRepositoryImpl implements PaymentRepository {
 
     private final SpringDataPaymentRepository springDataPaymentRepository;
 
-    private final PaymentEntityMapper paymentEntityMapper;
-
     @Override
     public Payment save(Payment payment) {
 

@@ -1,4 +1,4 @@
-package com.lmf.payment.paymentservice.domain;
+package com.lmf.payment.paymentservice.domain.model;
 
 public enum PaymentMethod {
 

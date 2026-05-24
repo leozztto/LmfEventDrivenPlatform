@@ -1,20 +1,28 @@
 package com.lmf.payment.paymentservice.infrastructure.persistence.mapper;
 
-import com.lmf.payment.paymentservice.domain.Payment;
+import com.lmf.payment.paymentservice.application.command.ProcessPaymentCommand;
+import com.lmf.payment.paymentservice.domain.model.Payment;
+import com.lmf.payment.paymentservice.domain.model.PaymentStatus;
 import com.lmf.payment.paymentservice.infrastructure.persistence.entity.PaymentEntity;
+import org.springframework.stereotype.Component;
 
+import java.time.OffsetDateTime;
+
+@Component
 public class PaymentEntityMapper {
-
-    private PaymentEntityMapper() {
-    }
 
     public static PaymentEntity toEntity(Payment payment) {
 
-        return PaymentEntity.builder().id(payment.getId()).orderId(payment.getOrderId()).customerId(payment.getCustomerId()).amount(payment.getAmount()).currency(payment.getCurrency()).paymentMethod(payment.getPaymentMethod()).installments(payment.getInstallments()).status(payment.getStatus()).provider(payment.getProvider()).transactionId(payment.getTransactionId()).gatewayStatus(payment.getGatewayStatus()).createdAt(payment.getCreatedAt()).paidAt(payment.getPaidAt()).failedAt(payment.getFailedAt()).build();
+        return new PaymentEntity(payment.getOrderId(), payment.getCustomerId(), payment.getAmount(), payment.getCurrency(), payment.getPaymentMethod(), payment.getInstallments(), PaymentStatus.PENDING, payment.getProvider(), payment.getCreatedAt());
     }
 
     public static Payment toDomain(PaymentEntity paymentEntity) {
 
-        return Payment.builder().id(paymentEntity.getId()).orderId(paymentEntity.getOrderId()).customerId(paymentEntity.getCustomerId()).amount(paymentEntity.getAmount()).currency(paymentEntity.getCurrency()).paymentMethod(paymentEntity.getPaymentMethod()).installments(paymentEntity.getInstallments()).status(paymentEntity.getStatus()).provider(paymentEntity.getProvider()).transactionId(paymentEntity.getTransactionId()).gatewayStatus(paymentEntity.getGatewayStatus()).createdAt(paymentEntity.getCreatedAt()).paidAt(paymentEntity.getPaidAt()).failedAt(paymentEntity.getFailedAt()).build();
+        return new Payment(paymentEntity.getId(), paymentEntity.getOrderId(), paymentEntity.getCustomerId(), paymentEntity.getAmount(), paymentEntity.getCurrency(), paymentEntity.getPaymentMethod(), paymentEntity.getInstallments(), paymentEntity.getPaymentStatus(), paymentEntity.getProvider(), paymentEntity.getTransactionId(), paymentEntity.getGatewayStatus(), paymentEntity.getCreatedAt(), paymentEntity.getPaidAt(), paymentEntity.getFailedAt());
+    }
+
+    public static Payment toDomain(ProcessPaymentCommand processPaymentCommand) {
+
+        return new Payment(processPaymentCommand.orderId(), processPaymentCommand.customerId(), processPaymentCommand.amount(), processPaymentCommand.currency(), processPaymentCommand.paymentMethod(), processPaymentCommand.installments(), PaymentStatus.PENDING, "", OffsetDateTime.now());
     }
 }

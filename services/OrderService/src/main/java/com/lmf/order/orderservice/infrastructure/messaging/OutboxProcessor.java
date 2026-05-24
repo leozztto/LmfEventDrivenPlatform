@@ -18,20 +18,21 @@ import java.time.OffsetDateTime;
 public class OutboxProcessor {
 
     private final OutboxEventRepository outboxEventRepository;
+
     private final OrderEventPublisher orderEventPublisher;
 
-    @Scheduled(fixedDelay = 300000)
+    @Scheduled(fixedDelay = 30000)
     @Transactional
     public void process() {
 
         var pendingEvents = outboxEventRepository.findTop100ByOutboxStatusOrderByCreatedAtAsc(OutboxStatus.PENDING);
 
-        log.info("Processing pending outbox events. totalEvents={}", pendingEvents.size());
-
-        if (pendingEvents.isEmpty()) {
+         if (pendingEvents.isEmpty()) {
             log.debug("No pending outbox events found");
             return;
         }
+
+        log.info("Processing pending outbox events. totalEvents={}", pendingEvents.size());
 
         for (var event : pendingEvents) {
             processEvent(event);

@@ -1,8 +1,8 @@
-package com.lmf.payment.paymentservice.domain;
+package com.lmf.payment.paymentservice.domain.model;
 
 public enum PaymentStatus {
 
-    PENDING, APPROVED, REJECTED;
+    PENDING, APPROVED, FAILED, REFUNDED, REJECTED;
 
     public static PaymentStatus fromName(String name) {
         try {

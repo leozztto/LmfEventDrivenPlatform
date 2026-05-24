@@ -1,4 +1,4 @@
-CREATE TABLE payment
+CREATE TABLE payments
 (
     id UUID PRIMARY KEY,
     order_id UUID NOT NULL,
@@ -7,7 +7,7 @@ CREATE TABLE payment
     currency VARCHAR(10) NOT NULL,
     payment_method VARCHAR(50) NOT NULL,
     installments INTEGER,
-    status VARCHAR(50) NOT NULL,
+    payment_status VARCHAR(50) NOT NULL,
     provider VARCHAR(100) NOT NULL,
     transaction_id VARCHAR(255),
     gateway_status VARCHAR(100),
@@ -18,13 +18,13 @@ CREATE TABLE payment
 );
 
 CREATE INDEX idx_payment_status
-ON payment(status);
+ON payments(payment_status);
 
 CREATE INDEX idx_payment_created_at
-ON payment(created_at);
+ON payments(created_at);
 
 CREATE INDEX idx_payment_status_created_at
-ON payment(status, created_at);
+ON payments(payment_status, created_at);
 
 CREATE INDEX idx_payment_customer_id
-ON payment(customer_id);
+ON payments(customer_id);

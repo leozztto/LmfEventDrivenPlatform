@@ -7,6 +7,7 @@ import com.lmf.payment.paymentservice.domain.exception.InvalidPaymentMethodExcep
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import java.util.UUID;
 
 public class Payment {
@@ -39,6 +40,10 @@ public class Payment {
 
     private OffsetDateTime failedAt;
 
+    private OffsetDateTime updatedAt;
+
+    private String failureReason;
+
     private Payment() {
     }
 
@@ -47,23 +52,24 @@ public class Payment {
         Payment payment = new Payment();
 
         payment.id = UUID.randomUUID();
-        payment.orderId = orderId;
-        payment.customerId = customerId;
+        payment.orderId = Objects.requireNonNull(orderId);
+        payment.customerId = Objects.requireNonNull(customerId);
         payment.amount = amount;
         payment.currency = currency;
         payment.paymentMethod = paymentMethod;
-        payment.installments = installments;
+        payment.installments = installments == null ? 1 : installments;
         payment.paymentStatus = PaymentStatus.PENDING;
         payment.provider = provider;
         payment.gatewayStatus = "PROCESSING";
         payment.createdAt = OffsetDateTime.now();
+        payment.updatedAt = OffsetDateTime.now();
 
         payment.validate();
 
         return payment;
     }
 
-    public static Payment restore(UUID id, UUID orderId, UUID customerId, BigDecimal amount, String currency, PaymentMethod paymentMethod, Integer installments, PaymentStatus paymentStatus, String provider, String transactionId, String gatewayStatus, OffsetDateTime createdAt, OffsetDateTime paidAt, OffsetDateTime failedAt) {
+    public static Payment restore(UUID id, UUID orderId, UUID customerId, BigDecimal amount, String currency, PaymentMethod paymentMethod, Integer installments, PaymentStatus paymentStatus, String provider, String transactionId, String gatewayStatus, OffsetDateTime createdAt, OffsetDateTime paidAt, OffsetDateTime failedAt, OffsetDateTime updatedAt, String failureReason) {
 
         Payment payment = new Payment();
 
@@ -81,40 +87,74 @@ public class Payment {
         payment.createdAt = createdAt;
         payment.paidAt = paidAt;
         payment.failedAt = failedAt;
+        payment.updatedAt = updatedAt;
+        payment.failureReason = failureReason;
 
         return payment;
     }
 
     public void approve(String transactionId) {
 
-        if (this.paymentStatus != PaymentStatus.PENDING) {
-
-            throw new BusinessException("Only pending payments can be approved");
-        }
+        ensurePendingPayment();
 
         this.paymentStatus = PaymentStatus.APPROVED;
         this.transactionId = transactionId;
         this.gatewayStatus = "APPROVED";
         this.paidAt = OffsetDateTime.now();
+        touch();
     }
 
-    public void fail() {
+    public void fail(String failureReason) {
 
-        if (this.paymentStatus != PaymentStatus.PENDING) {
-
-            throw new BusinessException("Only pending payments can fail");
-        }
+        ensurePendingPayment();
 
         this.paymentStatus = PaymentStatus.FAILED;
         this.gatewayStatus = "FAILED";
+        this.failureReason = failureReason;
         this.failedAt = OffsetDateTime.now();
+        touch();
+    }
+
+    public void cancel() {
+
+        if (this.paymentStatus != PaymentStatus.PENDING) {
+
+            throw new BusinessException("Only pending payments can be cancelled");
+        }
+
+        this.paymentStatus = PaymentStatus.CANCELLED;
+        this.gatewayStatus = "CANCELLED";
+        touch();
+    }
+
+    private void ensurePendingPayment() {
+
+        if (this.paymentStatus != PaymentStatus.PENDING) {
+
+            throw new BusinessException("Only pending payments can be processed");
+        }
     }
 
     private void validate() {
 
+        validateRequiredFields();
         validateAmount();
+        validateCurrency();
         validateInstallments();
         validatePaymentMethodRules();
+    }
+
+    private void validateRequiredFields() {
+
+        if (paymentMethod == null) {
+
+            throw new InvalidPaymentMethodException("Payment method is required");
+        }
+
+        if (provider == null || provider.isBlank()) {
+
+            throw new BusinessException("Provider is required");
+        }
     }
 
     private void validateAmount() {
@@ -122,6 +162,14 @@ public class Payment {
         if (amount == null || amount.signum() <= 0) {
 
             throw new InvalidPaymentAmountException();
+        }
+    }
+
+    private void validateCurrency() {
+
+        if (currency == null || currency.isBlank()) {
+
+            throw new BusinessException("Currency is required");
         }
     }
 
@@ -139,6 +187,11 @@ public class Payment {
 
             throw new InvalidPaymentMethodException("PIX payments cannot have installments");
         }
+    }
+
+    private void touch() {
+
+        this.updatedAt = OffsetDateTime.now();
     }
 
     public UUID getId() {
@@ -195,5 +248,13 @@ public class Payment {
 
     public OffsetDateTime getFailedAt() {
         return failedAt;
+    }
+
+    public OffsetDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public String getFailureReason() {
+        return failureReason;
     }
 }

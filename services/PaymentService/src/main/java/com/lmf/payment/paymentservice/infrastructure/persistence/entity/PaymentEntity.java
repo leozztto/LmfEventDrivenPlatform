@@ -52,10 +52,14 @@ public class PaymentEntity {
 
     private OffsetDateTime failedAt;
 
+    private OffsetDateTime updatedAt;
+
+    private String failureReason;
+
     protected PaymentEntity() {
     }
 
-    public PaymentEntity(UUID id, UUID orderId, UUID customerId, BigDecimal amount, String currency, PaymentMethod paymentMethod, Integer installments, PaymentStatus paymentStatus, String provider, String transactionId, String gatewayStatus, OffsetDateTime createdAt, OffsetDateTime paidAt, OffsetDateTime failedAt) {
+    public PaymentEntity(UUID id, UUID orderId, UUID customerId, BigDecimal amount, String currency, PaymentMethod paymentMethod, Integer installments, PaymentStatus paymentStatus, String provider, String transactionId, String gatewayStatus, OffsetDateTime createdAt, OffsetDateTime paidAt, OffsetDateTime failedAt, OffsetDateTime updatedAt, String failureReason) {
 
         this.id = id;
         this.orderId = orderId;
@@ -71,6 +75,8 @@ public class PaymentEntity {
         this.createdAt = createdAt;
         this.paidAt = paidAt;
         this.failedAt = failedAt;
+        this.updatedAt = updatedAt;
+        this.failureReason = failureReason;
     }
 
     public UUID getId() {
@@ -127,5 +133,13 @@ public class PaymentEntity {
 
     public OffsetDateTime getFailedAt() {
         return failedAt;
+    }
+
+    public OffsetDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public String getFailureReason() {
+        return failureReason;
     }
 }

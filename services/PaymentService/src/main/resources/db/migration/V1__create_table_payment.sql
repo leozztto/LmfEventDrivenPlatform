@@ -14,6 +14,8 @@ CREATE TABLE payments
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     paid_at TIMESTAMP WITH TIME ZONE,
     failed_at TIMESTAMP WITH TIME ZONE,
+    updated_at TIMESTAMP WITH TIME ZONE,
+    failure_reason VARCHAR(255),
     CONSTRAINT uk_payment_order_id UNIQUE(order_id)
 );
 

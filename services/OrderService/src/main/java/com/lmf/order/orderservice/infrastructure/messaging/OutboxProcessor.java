@@ -2,7 +2,7 @@ package com.lmf.order.orderservice.infrastructure.messaging;
 
 import com.lmf.order.orderservice.domain.model.outbox.OutboxStatus;
 import com.lmf.order.orderservice.domain.repository.OutboxEventRepository;
-import com.lmf.order.orderservice.infrastructure.messaging.event.DlqEvent;
+import com.lmf.order.orderservice.infrastructure.messaging.event.DltEvent;
 import com.lmf.order.orderservice.infrastructure.persistence.entity.OutboxEventEntity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -67,13 +67,13 @@ public class OutboxProcessor {
 
             log.warn("Outbox event failed. eventId={}, retryCount={}, error={}", outboxEventEntity.getId(), outboxEventEntity.getRetryCount(), ex.getMessage());
 
-            if (outboxEventEntity.getOutboxStatus() == OutboxStatus.DLQ) {
+            if (outboxEventEntity.getOutboxStatus() == OutboxStatus.DLT) {
 
-                publishToDlq(outboxEventEntity);
+                publishToDlt(outboxEventEntity);
 
                 outboxEventRepository.save(outboxEventEntity);
 
-                log.error("Outbox event moved to DLQ. eventId={}, retryCount={}, error={}", outboxEventEntity.getId(), outboxEventEntity.getRetryCount(), outboxEventEntity.getErrorMessage());
+                log.error("Outbox event moved to DLT. eventId={}, retryCount={}, error={}", outboxEventEntity.getId(), outboxEventEntity.getRetryCount(), outboxEventEntity.getErrorMessage());
 
             } else {
 
@@ -86,12 +86,12 @@ public class OutboxProcessor {
         }
     }
 
-    private void publishToDlq(OutboxEventEntity outboxEventEntity) {
+    private void publishToDlt(OutboxEventEntity outboxEventEntity) {
 
-        DlqEvent dlqEvent = new DlqEvent(outboxEventEntity.getId(), outboxEventEntity.getAggregateId(), outboxEventEntity.getEventType(), outboxEventEntity.getPayload(), outboxEventEntity.getErrorMessage(), outboxEventEntity.getRetryCount(), OffsetDateTime.now());
+        DltEvent dltEvent = new DltEvent(outboxEventEntity.getId(), outboxEventEntity.getAggregateId(), outboxEventEntity.getEventType(), outboxEventEntity.getPayload(), outboxEventEntity.getErrorMessage(), outboxEventEntity.getRetryCount(), OffsetDateTime.now());
 
-        orderEventPublisher.publish(KafkaTopics.ORDER_CREATED_DLQ, outboxEventEntity.getAggregateId().toString(), dlqEvent.toString());
+        orderEventPublisher.publish(KafkaTopics.ORDER_CREATED_DLT, outboxEventEntity.getAggregateId().toString(), dltEvent.toString());
 
-        log.error("Event published to DLQ topic. eventId={}, dlqTopic={}", outboxEventEntity.getId(), KafkaTopics.ORDER_CREATED_DLQ);
+        log.error("Event published to DLT topic. eventId={}, dltTopic={}", outboxEventEntity.getId(), KafkaTopics.ORDER_CREATED_DLT);
     }
 }

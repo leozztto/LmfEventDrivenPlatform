@@ -69,7 +69,7 @@ public class OutboxEventEntity {
 
         if (retryCount >= 3) {
 
-            this.outboxStatus = OutboxStatus.DLQ;
+            this.outboxStatus = OutboxStatus.DLT;
 
             return;
         }

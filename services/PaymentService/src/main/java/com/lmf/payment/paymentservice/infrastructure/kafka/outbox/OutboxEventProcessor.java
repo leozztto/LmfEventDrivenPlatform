@@ -71,13 +71,13 @@ public class OutboxEventProcessor {
 
             log.warn("Outbox event failed. eventId={}, retryCount={}, error={}", outboxEventEntity.getId(), outboxEventEntity.getRetryCount(), ex.getMessage());
 
-            if (outboxEventEntity.getOutboxStatus() == OutboxStatus.DLQ) {
+            if (outboxEventEntity.getOutboxStatus() == OutboxStatus.DLT) {
 
                 publishToDlt(outboxEventEntity);
 
                 outboxEventRepository.save(outboxEventEntity);
 
-                log.error("Outbox event moved to DLQ. eventId={}, retryCount={}, error={}", outboxEventEntity.getId(), outboxEventEntity.getRetryCount(), outboxEventEntity.getErrorMessage());
+                log.error("Outbox event moved to DLT. eventId={}, retryCount={}, error={}", outboxEventEntity.getId(), outboxEventEntity.getRetryCount(), outboxEventEntity.getErrorMessage());
 
             } else {
 

@@ -1,7 +1,7 @@
 package com.lmf.order.orderservice.domain.model.outbox;
 
 public enum OutboxStatus {
-    PENDING, PROCESSING, PUBLISHED, FAILED, DLQ;
+    PENDING, PROCESSING, PUBLISHED, FAILED, DLT;
 
     public static OutboxStatus fromName(String name) {
         try {

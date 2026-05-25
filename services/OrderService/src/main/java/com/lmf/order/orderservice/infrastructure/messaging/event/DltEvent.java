@@ -3,7 +3,7 @@ package com.lmf.order.orderservice.infrastructure.messaging.event;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-public record DlqEvent(
+public record DltEvent(
 
         UUID eventId,
 

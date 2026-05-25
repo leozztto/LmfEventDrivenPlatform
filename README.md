@@ -99,7 +99,7 @@ This project demonstrates production-grade backend patterns including:
 Padrões aplicados:
 
 - Transactional Outbox
-- Dead Letter Queue (DLQ)
+- Dead Letter Topic (DLT)
 - Retry Pattern
 - Idempotency
 

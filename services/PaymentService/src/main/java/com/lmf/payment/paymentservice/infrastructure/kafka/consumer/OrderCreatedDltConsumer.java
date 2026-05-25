@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class OrderCreatedDltConsumer {
 
-    @KafkaListener(topics = "order.created.DLT", groupId = "payment-service-dlt-group")
+    @KafkaListener(topics = "order.created.dlt", groupId = "payment-service-dlt-group")
     public void consume(OrderCreatedEvent orderCreatedEvent) {
 
         log.error("Message sent to DLT. orderId={}", orderCreatedEvent.orderId());

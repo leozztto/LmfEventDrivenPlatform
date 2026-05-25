@@ -52,6 +52,31 @@ This project demonstrates production-grade backend patterns including:
 
 ## Payment Service
 
+Payment processing microservice built with Domain-Driven Design (DDD), Event-Driven Architecture and Clean Architecture principles using Spring Boot.
+
+This service is responsible for handling payment transactions asynchronously, ensuring consistency and reliability across distributed services.
+
+### Features
+
+- Payment processing workflow
+- Kafka-based asynchronous communication
+- Transactional Outbox Pattern
+- Idempotent payment processing
+- Payment status lifecycle management
+- Retry and Dead Letter Topic (DLT) support
+- Global exception handling
+- PostgreSQL persistence with Flyway migrations
+- Observability with Prometheus metrics
+- Distributed tracing ready with OpenTelemetry
+- Integration testing with Testcontainers
+
+### Payment Lifecycle
+
+```text
+PENDING -> PROCESSING -> APPROVED
+                           └-> FAILED
+```
+
 ---
 
 ## Notification Service

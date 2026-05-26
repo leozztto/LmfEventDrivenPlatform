@@ -29,5 +29,31 @@ spring:
     listener:
       ack-mode: record
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus,metrics,info
+
+  endpoint:
+    health:
+      show-details: always
+
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
 server:
   port: 8082
+
+logging:
+  pattern:
+    console: >
+      %d{yyyy-MM-dd HH:mm:ss}
+      [%thread]
+      %-5level
+      traceId=%X{traceId}
+      correlationId=%X{correlationId}
+      %logger{36}
+      - %msg%n

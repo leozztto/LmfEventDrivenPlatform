@@ -2,7 +2,7 @@ package com.lmf.payment.paymentservice.domain.model;
 
 public enum PaymentMethod {
 
-    CREDIT_CARD, DEBIT_CARD, PIX, BOLETO, PAYPAL, APPLE_PAY, GOOGLE_PAY;
+    CREDIT_CARD, DEBIT_CARD, PIX, BOLETO, PAYPAL, APPLE_PAY, GOOGLE_PAY, MERCAD_PAGO;
 
     public static PaymentMethod fromName(String name) {
         try {

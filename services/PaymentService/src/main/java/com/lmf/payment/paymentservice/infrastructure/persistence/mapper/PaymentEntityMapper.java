@@ -9,5 +9,8 @@ public interface PaymentEntityMapper {
 
     PaymentEntity toEntity(Payment payment);
 
-    Payment toDomain(PaymentEntity entity);
+    default Payment toDomain(PaymentEntity entity) {
+
+        return Payment.restore(entity.getId(), entity.getOrderId(), entity.getCustomerId(), entity.getAmount(), entity.getCurrency(), entity.getPaymentMethod(), entity.getInstallments(), entity.getPaymentStatus(), entity.getProvider(), entity.getTransactionId(), entity.getGatewayStatus(), entity.getCreatedAt(), entity.getPaidAt(), entity.getFailedAt(), entity.getUpdatedAt(), entity.getFailureReason());
+    }
 }

@@ -1,72 +1,43 @@
 package com.lmf.payment.paymentservice.application.usecase;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lmf.payment.paymentservice.application.command.ProcessPaymentCommand;
+import com.lmf.payment.paymentservice.application.service.*;
 import com.lmf.payment.paymentservice.domain.model.Payment;
-import com.lmf.payment.paymentservice.application.event.PaymentCreatedEvent;
-import com.lmf.payment.paymentservice.domain.repository.PaymentRepository;
-import com.lmf.payment.paymentservice.infrastructure.mapper.PaymentCreatedEventMapper;
-import com.lmf.payment.paymentservice.infrastructure.outbox.OutboxStatus;
-import com.lmf.payment.paymentservice.infrastructure.persistence.entity.OutboxEventEntity;
-import com.lmf.payment.paymentservice.infrastructure.persistence.mapper.PaymentEntityMapper;
-import com.lmf.payment.paymentservice.domain.repository.OutboxEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ProcessPaymentUseCase {
 
-    private final PaymentRepository paymentRepository;
+    private final PaymentValidationService paymentValidationService;
 
-    private final PaymentCreatedEventMapper paymentCreatedEventMapper;
+    private final PaymentCreationService paymentCreationService;
 
-    private final OutboxEventRepository outboxEventRepository;
+    private final PaymentProcessorService paymentProcessorService;
 
-    private final ObjectMapper objectMapper;
+    private final PaymentPersistenceService paymentPersistenceService;
+
+    private final PaymentEventService paymentEventService;
 
     @Transactional
     public void execute(ProcessPaymentCommand processPaymentCommand) {
 
-        log.info("Creating payment. orderId={}, amount={}, paymentMethod={}, installments={}", processPaymentCommand.orderId(), processPaymentCommand.amount(), processPaymentCommand.paymentMethod(), processPaymentCommand.installments());
+        log.info("Processing payment. orderId={}, amount={}", processPaymentCommand.orderId(), processPaymentCommand.amount());
 
-        paymentRepository.findByOrderId(processPaymentCommand.orderId()).ifPresent(payment -> {
+        paymentValidationService.validatePaymentDoesNotExist(processPaymentCommand.orderId());
 
-            throw new IllegalStateException("Payment already exists");
-        });
+        Payment payment = paymentCreationService.create(processPaymentCommand);
 
-        Payment payment = Payment.create(processPaymentCommand.orderId(), processPaymentCommand.customerId(), processPaymentCommand.amount(), processPaymentCommand.currency(), processPaymentCommand.paymentMethod(), processPaymentCommand.installments(), "MERCADO_PAGO");
+        paymentProcessorService.process(payment);
 
-        paymentRepository.save(payment);
+        paymentPersistenceService.save(payment);
 
-        log.info("Payment created successfully. paymentId={}, orderId={}, amount={}", payment.getId(), payment.getOrderId(), payment.getAmount());
+        paymentEventService.publishPaymentCreated(payment);
 
-        createOutboxEvent(payment);
-
-    }
-
-    private void createOutboxEvent(Payment payment) {
-
-        try {
-
-            PaymentCreatedEvent paymentCreatedEvent = paymentCreatedEventMapper.toEvent(payment);
-
-            String payload = objectMapper.writeValueAsString(paymentCreatedEvent);
-
-            OutboxEventEntity outboxEventEntity = new OutboxEventEntity(payment.getId(), "PAYMENT", "PAYMENT_CREATED", payload, OutboxStatus.PENDING);
-
-            outboxEventRepository.save(outboxEventEntity);
-
-            log.info("Outbox created successfully. eventId={}, payload={}", outboxEventEntity.getId(), outboxEventEntity.getPayload());
-
-        } catch (JsonProcessingException ex) {
-
-            throw new RuntimeException("Failed to create outbox event", ex);
-        }
+        log.info("Payment processed successfully. paymentId={}, status={}", payment.getId(), payment.getPaymentStatus());
     }
 }

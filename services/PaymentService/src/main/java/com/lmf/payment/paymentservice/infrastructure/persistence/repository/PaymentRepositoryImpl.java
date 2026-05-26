@@ -15,15 +15,17 @@ public class PaymentRepositoryImpl implements PaymentRepository {
 
     private final SpringDataPaymentRepository springDataPaymentRepository;
 
+    private final PaymentEntityMapper paymentEntityMapper;
+
     @Override
     public Payment save(Payment payment) {
 
-        return PaymentEntityMapper.toDomain(springDataPaymentRepository.save(PaymentEntityMapper.toEntity(payment)));
+        return paymentEntityMapper.toDomain(springDataPaymentRepository.save(paymentEntityMapper.toEntity(payment)));
     }
 
     @Override
     public Optional<Payment> findByOrderId(UUID orderId) {
 
-        return springDataPaymentRepository.findByOrderId(orderId).map(PaymentEntityMapper::toDomain);
+        return springDataPaymentRepository.findByOrderId(orderId).map(paymentEntityMapper::toDomain);
     }
 }

@@ -22,9 +22,15 @@ public class PaymentProcessorService {
 
     public void process(Payment payment) {
 
+        log.info("Processing payment. paymentId={}, provider={}, amount={}, method={}", payment.getId(), payment.getProvider(), payment.getAmount(), payment.getPaymentMethod());
+
         PaymentGatewayRequest paymentGatewayRequest = new PaymentGatewayRequest(payment.getId(), payment.getOrderId(), payment.getCustomerId(), payment.getAmount(), payment.getCurrency(), payment.getPaymentMethod(), payment.getInstallments());
 
+        log.info("Resolving payment gateway. paymentId={}, paymentMethod={}", payment.getId(), payment.getPaymentMethod());
+
         PaymentGateway paymentGateway = gatewayResolver.resolve(payment.getPaymentMethod());
+
+        log.info("Payment gateway resolved. paymentId={}, gateway={}", payment.getId(), paymentGateway.getClass().getSimpleName());
 
         PaymentGatewayResponse paymentGatewayResponse = paymentGateway.process(paymentGatewayRequest);
 
@@ -40,6 +46,8 @@ public class PaymentProcessorService {
         }
 
         payment.fail(paymentGatewayResponse.failureReason(), paymentGatewayResponse.gatewayStatus());
+
+        log.warn("Payment failed. paymentId={}, reason={}, gatewayStatus={}", payment.getId(), paymentGatewayResponse.failureReason(), paymentGatewayResponse.gatewayStatus());
 
         metricsService.incrementFailedPayments();
 

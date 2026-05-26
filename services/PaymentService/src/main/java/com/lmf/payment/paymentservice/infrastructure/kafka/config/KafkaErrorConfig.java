@@ -24,6 +24,22 @@ public class KafkaErrorConfig {
     @Bean
     public DefaultErrorHandler kafkaErrorHandler(KafkaTemplate<String, String> kafkaTemplate) {
 
+        DefaultErrorHandler errorHandler = getDefaultErrorHandler(kafkaTemplate);
+
+        errorHandler.addRetryableExceptions(RetryableException.class, PaymentGatewayException.class, PaymentTimeoutException.class, SQLException.class, TimeoutException.class);
+
+        errorHandler.addNotRetryableExceptions(NonRetryableException.class, PaymentDeclinedException.class, IllegalArgumentException.class);
+
+        errorHandler.setRetryListeners((record, ex, deliveryAttempt) -> {
+
+            log.warn("Retrying kafka message. topic={}, partition={}, offset={}, attempt={}, error={}", record.topic(), record.partition(), record.offset(), deliveryAttempt, ex.getMessage());
+        });
+
+        return errorHandler;
+    }
+
+    private static DefaultErrorHandler getDefaultErrorHandler(KafkaTemplate<String, String> kafkaTemplate) {
+
         DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(kafkaTemplate, (record, exception) -> {
 
             log.error("Sending message to DLT. topic={}, partition={}, offset={}, error={}", record.topic(), record.partition(), record.offset(), exception.getMessage());
@@ -34,19 +50,12 @@ public class KafkaErrorConfig {
         ExponentialBackOff backOff = new ExponentialBackOff();
 
         backOff.setInitialInterval(2000L);
+
         backOff.setMultiplier(2.0);
+
         backOff.setMaxInterval(30000L);
 
         DefaultErrorHandler errorHandler = new DefaultErrorHandler(recoverer, backOff);
-
-        errorHandler.addRetryableExceptions(RetryableException.class, PaymentGatewayException.class, PaymentTimeoutException.class, SQLException.class, TimeoutException.class);
-
-        errorHandler.addNotRetryableExceptions(NonRetryableException.class, PaymentDeclinedException.class, IllegalArgumentException.class);
-
-        errorHandler.setRetryListeners((record, ex, deliveryAttempt) -> {
-
-            log.warn("Retrying kafka message. topic={}, partition={}, offset={}, attempt={}, error={}", record.topic(), record.partition(), record.offset(), deliveryAttempt, ex.getMessage());
-        });
 
         return errorHandler;
     }

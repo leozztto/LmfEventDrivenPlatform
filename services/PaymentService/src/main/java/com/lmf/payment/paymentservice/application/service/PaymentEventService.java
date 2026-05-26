@@ -11,11 +11,13 @@ import com.lmf.payment.paymentservice.domain.repository.OutboxEventRepository;
 import com.lmf.payment.paymentservice.infrastructure.outbox.OutboxStatus;
 import com.lmf.payment.paymentservice.infrastructure.persistence.entity.OutboxEventEntity;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaymentEventService {
@@ -38,23 +40,23 @@ public class PaymentEventService {
 
     private void publishProcessing(Payment payment) {
 
-        PaymentProcessingEvent event = new PaymentProcessingEvent(payment.getId(), payment.getOrderId(), payment.getCustomerId(), payment.getAmount(), payment.getCurrency(), payment.getPaymentMethod(), OffsetDateTime.now());
+        PaymentProcessingEvent paymentProcessingEvent = new PaymentProcessingEvent(payment.getId(), payment.getOrderId(), payment.getCustomerId(), payment.getAmount(), payment.getCurrency(), payment.getPaymentMethod(), OffsetDateTime.now());
 
-        saveOutbox(payment.getId(), "PAYMENT_PROCESSING", event);
+        saveOutbox(payment.getId(), "PAYMENT_PROCESSING", paymentProcessingEvent);
     }
 
     private void publishApproved(Payment payment) {
 
-        PaymentApprovedEvent event = new PaymentApprovedEvent(payment.getId(), payment.getOrderId(), payment.getCustomerId(), payment.getAmount(), payment.getCurrency(), payment.getPaymentMethod(), payment.getTransactionId(), payment.getProvider(), payment.getPaidAt());
+        PaymentApprovedEvent paymentApprovedEvent = new PaymentApprovedEvent(payment.getId(), payment.getOrderId(), payment.getCustomerId(), payment.getAmount(), payment.getCurrency(), payment.getPaymentMethod(), payment.getTransactionId(), payment.getProvider(), payment.getPaidAt());
 
-        saveOutbox(payment.getId(), "PAYMENT_APPROVED", event);
+        saveOutbox(payment.getId(), "PAYMENT_APPROVED", paymentApprovedEvent);
     }
 
     private void publishFailed(Payment payment) {
 
-        PaymentFailedEvent event = new PaymentFailedEvent(payment.getId(), payment.getOrderId(), payment.getCustomerId(), payment.getAmount(), payment.getCurrency(), payment.getPaymentMethod(), payment.getFailureReason(), payment.getGatewayStatus(), payment.getFailedAt());
+        PaymentFailedEvent paymentFailedEvent = new PaymentFailedEvent(payment.getId(), payment.getOrderId(), payment.getCustomerId(), payment.getAmount(), payment.getCurrency(), payment.getPaymentMethod(), payment.getFailureReason(), payment.getGatewayStatus(), payment.getFailedAt());
 
-        saveOutbox(payment.getId(), "PAYMENT_FAILED", event);
+        saveOutbox(payment.getId(), "PAYMENT_FAILED", paymentFailedEvent);
     }
 
     private void saveOutbox(UUID aggregateId, String eventType, Object payloadObject) {
@@ -63,11 +65,15 @@ public class PaymentEventService {
 
             String payload = objectMapper.writeValueAsString(payloadObject);
 
-            OutboxEventEntity outbox = new OutboxEventEntity(aggregateId, "PAYMENT", eventType, payload, OutboxStatus.PENDING);
+            OutboxEventEntity outboxEventEntity = new OutboxEventEntity(aggregateId, "PAYMENT", eventType, payload, OutboxStatus.PENDING);
 
-            outboxEventRepository.save(outbox);
+            outboxEventRepository.save(outboxEventEntity);
+
+            log.info("Outbox event created. eventType={}, eventId={}", "PAYMENT_CREATED", outboxEventEntity.getId());
 
         } catch (JsonProcessingException ex) {
+
+            log.error("Failed to serialize payment created event. payment={}", payloadObject, ex);
 
             throw new EventSerializationException("Failed to serialize event", ex);
         }

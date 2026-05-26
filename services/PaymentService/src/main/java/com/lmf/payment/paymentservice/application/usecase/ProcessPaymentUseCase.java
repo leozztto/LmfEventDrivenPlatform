@@ -26,18 +26,30 @@ public class ProcessPaymentUseCase {
     @Transactional
     public void execute(ProcessPaymentCommand processPaymentCommand) {
 
-        log.info("Processing payment. orderId={}, amount={}", processPaymentCommand.orderId(), processPaymentCommand.amount());
+        try {
+            log.info("Starting payment workflow. orderId={}, customerId={}, amount={}, paymentMethod={}, installments={}", processPaymentCommand.orderId(), processPaymentCommand.customerId(), processPaymentCommand.amount(), processPaymentCommand.paymentMethod(), processPaymentCommand.installments());
 
-        paymentValidationService.validatePaymentDoesNotExist(processPaymentCommand.orderId());
+            long start = System.currentTimeMillis();
 
-        Payment payment = paymentCreationService.create(processPaymentCommand);
+            paymentValidationService.validatePaymentDoesNotExist(processPaymentCommand.orderId());
 
-        paymentProcessorService.process(payment);
+            Payment payment = paymentCreationService.create(processPaymentCommand);
 
-        paymentPersistenceService.save(payment);
+            log.info("Payment created successfully. paymentId={}, orderId={}, status={}", payment.getId(), payment.getOrderId(), payment.getPaymentStatus());
 
-        paymentEventService.publish(payment);
+            paymentProcessorService.process(payment);
 
-        log.info("Payment processed successfully. paymentId={}, status={}", payment.getId(), payment.getPaymentStatus());
+            paymentPersistenceService.save(payment);
+
+            paymentEventService.publish(payment);
+
+            log.info("Payment workflow finished successfully. paymentId={}, orderId={}, status={}, durationMs={}", payment.getId(), payment.getOrderId(), payment.getPaymentStatus(), System.currentTimeMillis() - start);
+
+        } catch (Exception ex) {
+
+            log.error("Payment workflow failed. orderId={}, error={}", processPaymentCommand.orderId(), ex.getMessage(), ex);
+
+            throw ex;
+        }
     }
 }

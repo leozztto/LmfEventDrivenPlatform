@@ -36,7 +36,7 @@ public class OutboxEventProcessor {
             return;
         }
 
-        log.info("Processing {} outbox events", pendingEvents.size());
+        log.info("Publishing pending outbox events. batchSize={}", pendingEvents.size());
 
         for (var event : pendingEvents) {
             processEvent(event);

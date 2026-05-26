@@ -1,7 +1,11 @@
 package com.lmf.payment.paymentservice.domain.model;
 
 import com.lmf.payment.paymentservice.domain.exception.*;
-import lombok.*;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -9,10 +13,9 @@ import java.util.Objects;
 import java.util.UUID;
 
 @Getter
-@Setter
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class Payment {
 
     private UUID id;
@@ -49,20 +52,7 @@ public class Payment {
 
     public static Payment create(UUID orderId, UUID customerId, BigDecimal amount, String currency, PaymentMethod paymentMethod, Integer installments, String provider) {
 
-        Payment payment = new Payment();
-
-        payment.id = UUID.randomUUID();
-        payment.orderId = Objects.requireNonNull(orderId);
-        payment.customerId = Objects.requireNonNull(customerId);
-        payment.amount = amount;
-        payment.currency = currency;
-        payment.paymentMethod = paymentMethod;
-        payment.installments = installments == null ? 1 : installments;
-        payment.paymentStatus = PaymentStatus.PENDING;
-        payment.provider = provider;
-        payment.gatewayStatus = "PROCESSING";
-        payment.createdAt = OffsetDateTime.now();
-        payment.updatedAt = OffsetDateTime.now();
+        Payment payment = Payment.builder().id(UUID.randomUUID()).orderId(Objects.requireNonNull(orderId, "OrderId is required")).customerId(Objects.requireNonNull(customerId, "CustomerId is required")).amount(amount).currency(normalizeCurrency(currency)).paymentMethod(paymentMethod).installments(resolveInstallments(installments)).paymentStatus(PaymentStatus.PENDING).provider(provider).gatewayStatus("PROCESSING").createdAt(OffsetDateTime.now()).updatedAt(OffsetDateTime.now()).build();
 
         payment.validate();
 
@@ -71,73 +61,63 @@ public class Payment {
 
     public static Payment restore(UUID id, UUID orderId, UUID customerId, BigDecimal amount, String currency, PaymentMethod paymentMethod, Integer installments, PaymentStatus paymentStatus, String provider, String transactionId, String gatewayStatus, OffsetDateTime createdAt, OffsetDateTime paidAt, OffsetDateTime failedAt, OffsetDateTime updatedAt, String failureReason) {
 
-        Payment payment = new Payment();
-
-        payment.id = id;
-        payment.orderId = orderId;
-        payment.customerId = customerId;
-        payment.amount = amount;
-        payment.currency = currency;
-        payment.paymentMethod = paymentMethod;
-        payment.installments = installments;
-        payment.paymentStatus = paymentStatus;
-        payment.provider = provider;
-        payment.transactionId = transactionId;
-        payment.gatewayStatus = gatewayStatus;
-        payment.createdAt = createdAt;
-        payment.paidAt = paidAt;
-        payment.failedAt = failedAt;
-        payment.updatedAt = updatedAt;
-        payment.failureReason = failureReason;
-
-        return payment;
+        return Payment.builder().id(id).orderId(orderId).customerId(customerId).amount(amount).currency(currency).paymentMethod(paymentMethod).installments(installments).paymentStatus(paymentStatus).provider(provider).transactionId(transactionId).gatewayStatus(gatewayStatus).createdAt(createdAt).paidAt(paidAt).failedAt(failedAt).updatedAt(updatedAt).failureReason(failureReason).build();
     }
 
     public void approve(String transactionId, String gatewayStatus) {
 
-        if (this.paymentStatus != PaymentStatus.PENDING) {
-
-            throw new InvalidPaymentStateException("Only pending payments can be approved");
-        }
+        ensurePendingPayment();
 
         this.paymentStatus = PaymentStatus.APPROVED;
         this.transactionId = transactionId;
         this.gatewayStatus = gatewayStatus;
         this.paidAt = OffsetDateTime.now();
-        this.updatedAt = OffsetDateTime.now();
+
+        touch();
     }
 
     public void fail(String failureReason, String gatewayStatus) {
 
-        if (this.paymentStatus != PaymentStatus.PENDING) {
-
-            throw new InvalidPaymentStateException("Only pending payments can fail");
-        }
+        ensurePendingPayment();
 
         this.paymentStatus = PaymentStatus.FAILED;
         this.failureReason = failureReason;
         this.gatewayStatus = gatewayStatus;
         this.failedAt = OffsetDateTime.now();
-        this.updatedAt = OffsetDateTime.now();
+
+        touch();
     }
 
     public void cancel() {
 
-        if (this.paymentStatus != PaymentStatus.PENDING) {
-
-            throw new BusinessException("Only pending payments can be cancelled");
-        }
+        ensurePendingPayment();
 
         this.paymentStatus = PaymentStatus.CANCELLED;
         this.gatewayStatus = "CANCELLED";
+
         touch();
+    }
+
+    public boolean isApproved() {
+
+        return this.paymentStatus == PaymentStatus.APPROVED;
+    }
+
+    public boolean isFailed() {
+
+        return this.paymentStatus == PaymentStatus.FAILED;
+    }
+
+    public boolean isPending() {
+
+        return this.paymentStatus == PaymentStatus.PENDING;
     }
 
     private void ensurePendingPayment() {
 
-        if (this.paymentStatus != PaymentStatus.PENDING) {
+        if (!isPending()) {
 
-            throw new BusinessException("Only pending payments can be processed");
+            throw new InvalidPaymentStateException("Only pending payments can be processed");
         }
     }
 
@@ -159,7 +139,7 @@ public class Payment {
 
         if (provider == null || provider.isBlank()) {
 
-            throw new BusinessException("Provider is required");
+            throw new InvalidProviderException("Provider is required");
         }
     }
 
@@ -175,13 +155,13 @@ public class Payment {
 
         if (currency == null || currency.isBlank()) {
 
-            throw new BusinessException("Currency is required");
+            throw new InvalidCurrencyException("Currency is required");
         }
     }
 
     private void validateInstallments() {
 
-        if (installments != null && installments < 1) {
+        if (installments == null || installments < 1) {
 
             throw new InvalidInstallmentsException();
         }
@@ -189,7 +169,7 @@ public class Payment {
 
     private void validatePaymentMethodRules() {
 
-        if (paymentMethod == PaymentMethod.PIX && installments != null && installments > 1) {
+        if (paymentMethod == PaymentMethod.PIX && installments > 1) {
 
             throw new InvalidPaymentMethodException("PIX payments cannot have installments");
         }
@@ -198,5 +178,20 @@ public class Payment {
     private void touch() {
 
         this.updatedAt = OffsetDateTime.now();
+    }
+
+    private static Integer resolveInstallments(Integer installments) {
+
+        return installments == null ? 1 : installments;
+    }
+
+    private static String normalizeCurrency(String currency) {
+
+        if (currency == null) {
+
+            return null;
+        }
+
+        return currency.trim().toUpperCase();
     }
 }

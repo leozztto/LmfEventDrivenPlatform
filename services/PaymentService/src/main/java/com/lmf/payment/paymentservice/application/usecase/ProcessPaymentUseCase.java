@@ -36,7 +36,7 @@ public class ProcessPaymentUseCase {
 
         paymentPersistenceService.save(payment);
 
-        paymentEventService.publishPaymentCreated(payment);
+        paymentEventService.publish(payment);
 
         log.info("Payment processed successfully. paymentId={}, status={}", payment.getId(), payment.getPaymentStatus());
     }

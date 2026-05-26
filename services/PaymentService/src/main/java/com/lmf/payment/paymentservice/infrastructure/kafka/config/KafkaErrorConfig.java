@@ -1,5 +1,6 @@
 package com.lmf.payment.paymentservice.infrastructure.kafka.config;
 
+import com.lmf.payment.paymentservice.domain.exception.BusinessException;
 import com.lmf.payment.paymentservice.infrastructure.exception.NonRetryableException;
 import com.lmf.payment.paymentservice.infrastructure.exception.RetryableException;
 import org.apache.kafka.common.TopicPartition;
@@ -25,9 +26,9 @@ public class KafkaErrorConfig {
 
         DefaultErrorHandler errorHandler = new DefaultErrorHandler(recoverer, backOff);
 
-        errorHandler.addNotRetryableExceptions(RuntimeException.class, NonRetryableException.class, IllegalArgumentException.class);
-
         errorHandler.addRetryableExceptions(RetryableException.class, SQLException.class, TimeoutException.class);
+
+        errorHandler.addNotRetryableExceptions(BusinessException.class, NonRetryableException.class, IllegalArgumentException.class);
 
         return errorHandler;
     }

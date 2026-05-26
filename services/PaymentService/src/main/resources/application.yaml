@@ -49,6 +49,7 @@ server:
 
 logging:
   pattern:
+    correlation: "[${spring.application.name:},%X{traceId:-},%X{spanId:-}] "
     console: >
       %d{yyyy-MM-dd HH:mm:ss}
       [%thread]

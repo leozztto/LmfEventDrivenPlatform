@@ -20,7 +20,7 @@ public class MercadoPagoGateway implements PaymentGateway {
     @Override
     public PaymentGatewayResponse process(PaymentGatewayRequest paymentGatewayRequest) {
 
-        Payment payment = Payment.create(paymentGatewayRequest.orderId(), paymentGatewayRequest.customerId(), paymentGatewayRequest.amount(), paymentGatewayRequest.currency(), paymentGatewayRequest.paymentMethod(), paymentGatewayRequest.installments(), "");
+        Payment payment = Payment.create(paymentGatewayRequest.orderId(), paymentGatewayRequest.customerId(), paymentGatewayRequest.amount(), paymentGatewayRequest.currency(), paymentGatewayRequest.paymentMethod(), paymentGatewayRequest.installments(), "MERCADO_PAGO");
 
         log.info("Processing payment by MercadoPago. paymentId={}, amount={}", payment.getId(), payment.getAmount());
 

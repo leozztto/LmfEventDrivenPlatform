@@ -7,7 +7,11 @@ import org.mapstruct.Mapper;
 @Mapper(componentModel = "spring")
 public interface PaymentEntityMapper {
 
-    PaymentEntity toEntity(Payment payment);
+
+    default PaymentEntity toEntity(Payment payment) {
+
+        return new PaymentEntity(payment.getId(), payment.getOrderId(), payment.getCustomerId(), payment.getAmount(), payment.getCurrency(), payment.getPaymentMethod(), payment.getInstallments(), payment.getPaymentStatus(), payment.getProvider(), payment.getTransactionId(), payment.getGatewayStatus(), payment.getCreatedAt(), payment.getPaidAt(), payment.getFailedAt(), payment.getUpdatedAt(), payment.getFailureReason());
+    }
 
     default Payment toDomain(PaymentEntity entity) {
 

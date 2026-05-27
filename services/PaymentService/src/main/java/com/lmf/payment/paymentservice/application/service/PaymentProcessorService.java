@@ -7,8 +7,6 @@ import com.lmf.payment.paymentservice.application.gateway.impl.PaymentGatewayRes
 import com.lmf.payment.paymentservice.domain.exception.PaymentDeclinedException;
 import com.lmf.payment.paymentservice.domain.model.Payment;
 import com.lmf.payment.paymentservice.infrastructure.observability.PaymentMetricsService;
-import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.api.trace.Tracer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,19 +20,13 @@ public class PaymentProcessorService {
 
     private final PaymentMetricsService metricsService;
 
-    private final Tracer tracer;
-
     public void process(Payment payment) {
-
-        Span span = tracer.spanBuilder("payment-gateway-call").startSpan();
 
         log.info("Processing payment. paymentId={}, provider={}, amount={}, method={}", payment.getId(), payment.getProvider(), payment.getAmount(), payment.getPaymentMethod());
 
         PaymentGatewayRequest paymentGatewayRequest = new PaymentGatewayRequest(payment.getId(), payment.getOrderId(), payment.getCustomerId(), payment.getAmount(), payment.getCurrency(), payment.getPaymentMethod(), payment.getInstallments());
 
         log.info("Resolving payment gateway. paymentId={}, paymentMethod={}", payment.getId(), payment.getPaymentMethod());
-
-        span.setAttribute("payment.id", payment.getId().toString());
 
         PaymentGateway paymentGateway = gatewayResolver.resolve(payment.getPaymentMethod());
 
@@ -43,8 +35,6 @@ public class PaymentProcessorService {
         PaymentGatewayResponse paymentGatewayResponse = paymentGateway.process(paymentGatewayRequest);
 
         if (paymentGatewayResponse.success()) {
-
-            span.setAttribute("payment.status", "APPROVED");
 
             payment.approve(paymentGatewayResponse.transactionId(), paymentGatewayResponse.gatewayStatus());
 
@@ -56,8 +46,6 @@ public class PaymentProcessorService {
         }
 
         payment.fail(paymentGatewayResponse.failureReason(), paymentGatewayResponse.gatewayStatus());
-
-        span.setAttribute("payment.status", "REJECTED");
 
         log.warn("Payment failed. paymentId={}, reason={}, gatewayStatus={}", payment.getId(), paymentGatewayResponse.failureReason(), paymentGatewayResponse.gatewayStatus());
 

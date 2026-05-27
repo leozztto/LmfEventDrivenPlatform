@@ -3,7 +3,6 @@ package com.lmf.payment.paymentservice.application.usecase;
 import com.lmf.payment.paymentservice.application.command.ProcessPaymentCommand;
 import com.lmf.payment.paymentservice.application.service.*;
 import com.lmf.payment.paymentservice.domain.model.Payment;
-import io.micrometer.observation.annotation.Observed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,7 +23,6 @@ public class ProcessPaymentUseCase {
 
     private final PaymentEventService paymentEventService;
 
-    @Observed(name = "payment.process", contextualName = "process-payment")
     @Transactional
     public void execute(ProcessPaymentCommand processPaymentCommand) {
 

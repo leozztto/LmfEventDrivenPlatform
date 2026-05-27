@@ -4,19 +4,17 @@ import com.lmf.payment.paymentservice.application.gateway.PaymentGateway;
 import com.lmf.payment.paymentservice.application.gateway.dto.PaymentGatewayRequest;
 import com.lmf.payment.paymentservice.application.gateway.dto.PaymentGatewayResponse;
 import com.lmf.payment.paymentservice.domain.model.PaymentMethod;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
 @Component
-@Profile("local")
 public class FakePaymentGateway implements PaymentGateway {
 
     @Override
     public PaymentGatewayResponse process(PaymentGatewayRequest paymentGatewayRequest) {
 
-        boolean approved = paymentGatewayRequest.amount().doubleValue() <= 1000;
+        boolean approved = paymentGatewayRequest.amount().doubleValue() <= 10000;
 
         if (approved) {
 

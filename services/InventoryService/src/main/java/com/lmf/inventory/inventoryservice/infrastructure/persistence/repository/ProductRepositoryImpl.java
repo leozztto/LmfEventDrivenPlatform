@@ -1,0 +1,48 @@
+package com.lmf.inventory.inventoryservice.infrastructure.persistence.repository;
+
+import com.lmf.inventory.inventoryservice.domain.model.Product;
+import com.lmf.inventory.inventoryservice.domain.repository.ProductRepository;
+import com.lmf.inventory.inventoryservice.infrastructure.persistence.entity.ProductEntity;
+import com.lmf.inventory.inventoryservice.infrastructure.persistence.mapper.ProductPersistenceMapper;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Repository;
+
+import java.util.Optional;
+import java.util.UUID;
+
+@Repository
+@RequiredArgsConstructor
+public class ProductRepositoryImpl implements ProductRepository {
+
+    private final SpringDataProductRepository springDataProductRepository;
+
+    private final ProductPersistenceMapper productPersistenceMapper;
+
+    @Override
+    public Product save(Product product) {
+
+        ProductEntity productEntity = productPersistenceMapper.toEntity(product);
+
+        ProductEntity saved = springDataProductRepository.save(productEntity);
+
+        return productPersistenceMapper.toDomain(saved);
+    }
+
+    @Override
+    public Optional<Product> findById(UUID id) {
+
+        return springDataProductRepository.findById(id).map(productPersistenceMapper::toDomain);
+    }
+
+    @Override
+    public Optional<Product> findBySku(String sku) {
+
+        return springDataProductRepository.findBySku(sku).map(productPersistenceMapper::toDomain);
+    }
+
+    @Override
+    public boolean existsBySku(String sku) {
+
+        return springDataProductRepository.existsBySku(sku);
+    }
+}

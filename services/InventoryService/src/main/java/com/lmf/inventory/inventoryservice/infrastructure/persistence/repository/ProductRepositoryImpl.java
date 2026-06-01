@@ -7,6 +7,7 @@ import com.lmf.inventory.inventoryservice.infrastructure.persistence.mapper.Prod
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -44,5 +45,15 @@ public class ProductRepositoryImpl implements ProductRepository {
     public boolean existsBySku(String sku) {
 
         return springDataProductRepository.existsBySku(sku);
+    }
+
+    @Override
+    public Product update(Product product) {
+
+        ProductEntity productEntity = springDataProductRepository.findById(product.getId()).orElseThrow();
+
+        productEntity.updateStock(product.getProductStock().getAvailableQuantity(), product.getProductStock().getReservedQuantity(), OffsetDateTime.now());
+
+        return productPersistenceMapper.toDomain(productEntity);
     }
 }

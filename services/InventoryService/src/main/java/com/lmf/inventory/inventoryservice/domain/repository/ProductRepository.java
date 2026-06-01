@@ -14,4 +14,6 @@ public interface ProductRepository {
     Optional<Product> findBySku(String sku);
 
     boolean existsBySku(String sku);
+
+    Product update(Product product);
 }

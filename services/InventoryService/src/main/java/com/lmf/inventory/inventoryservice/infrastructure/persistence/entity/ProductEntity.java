@@ -46,4 +46,10 @@ public class ProductEntity {
     private OffsetDateTime createdAt;
 
     private OffsetDateTime updatedAt;
+
+    public void updateStock(Integer availableQuantity, Integer reservedQuantity, OffsetDateTime updatedAt) {
+        this.availableQuantity = availableQuantity;
+        this.reservedQuantity = reservedQuantity;
+        this.updatedAt = updatedAt;
+    }
 }

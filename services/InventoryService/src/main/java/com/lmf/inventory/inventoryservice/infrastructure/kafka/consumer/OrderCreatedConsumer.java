@@ -9,6 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -21,13 +23,34 @@ public class OrderCreatedConsumer {
     @KafkaListener(topics = KafkaTopics.ORDER_CREATED, groupId = "inventory-service-group")
     public void consume(OrderCreatedEvent orderCreatedEvent) {
 
-        if (inboxEventService.isDuplicate(orderCreatedEvent.eventId().toString())) {
+        String eventId = orderCreatedEvent.eventId().toString();
+
+        if (inboxEventService.isDuplicate(eventId)) {
 
             return;
         }
 
-        reserveInventoryUseCase.execute(orderCreatedEvent);
 
-        inboxEventService.register(orderCreatedEvent.eventId().toString(), orderCreatedEvent.orderId(), "RESERVED_CREATED");
+        try {
+
+            inboxEventService.register(eventId, orderCreatedEvent.orderId(), orderCreatedEvent.eventType());
+
+            reserveInventoryUseCase.execute(orderCreatedEvent);
+
+            inboxEventService.markProcessed(eventId);
+
+        } catch (Exception exception) {
+
+            inboxEventService.markFailed(eventId, extractReason(exception));
+
+            log.error("Error processing OrderCreatedEvent. eventId={}", eventId, exception);
+
+            throw exception;
+        }
+    }
+
+    private String extractReason(Throwable throwable) {
+
+        return Optional.ofNullable(throwable.getMessage()).orElse(throwable.getClass().getSimpleName());
     }
 }

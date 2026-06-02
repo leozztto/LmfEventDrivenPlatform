@@ -1,10 +1,13 @@
 package com.lmf.inventory.inventoryservice.application.service;
 
+import com.lmf.inventory.inventoryservice.domain.exception.DuplicateEventException;
 import com.lmf.inventory.inventoryservice.domain.repository.InboxEventRepository;
 import com.lmf.inventory.inventoryservice.infrastructure.persistence.entity.InboxEventEntity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
@@ -27,15 +30,23 @@ public class InboxEventService {
         return duplicated;
     }
 
+    @Transactional
     public InboxEventEntity register(String eventId, UUID aggregateId, String eventType) {
 
-        InboxEventEntity inboxMessage = new InboxEventEntity(eventId, aggregateId, eventType);
+        try {
 
-        inboxEventRepository.save(inboxMessage);
+            InboxEventEntity inboxMessage = new InboxEventEntity(eventId, aggregateId, eventType);
 
-        log.info("Inbox event registered. eventId={}, aggregateId={}, eventType={}", eventId, aggregateId, eventType);
+            InboxEventEntity saved = inboxEventRepository.save(inboxMessage);
 
-        return inboxMessage;
+            log.info("Inbox event registered. eventId={}, aggregateId={}, eventType={}", eventId, aggregateId, eventType);
+
+            return saved;
+
+        } catch (DataIntegrityViolationException exception) {
+
+            throw new DuplicateEventException(eventId);
+        }
     }
 
     public void markProcessed(String eventId) {

@@ -32,5 +32,7 @@ public record OrderCreatedEvent(
 
         PaymentInfo payment,
 
-        List<OrderItem> items) {
+        List<OrderItem> items
+
+) implements EventMessage {
 }

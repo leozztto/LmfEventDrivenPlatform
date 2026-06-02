@@ -4,6 +4,7 @@ import com.lmf.inventory.inventoryservice.application.usecase.ReserveInventoryUs
 import com.lmf.inventory.inventoryservice.domain.event.InventoryReservationFailedEvent;
 import com.lmf.inventory.inventoryservice.domain.event.InventoryReservationSuccessEvent;
 import com.lmf.inventory.inventoryservice.domain.event.OrderCreatedEvent;
+import com.lmf.inventory.inventoryservice.domain.event.ReservedItem;
 import com.lmf.inventory.inventoryservice.domain.event.order.OrderItem;
 import com.lmf.inventory.inventoryservice.domain.exception.ProductNotFoundException;
 import com.lmf.inventory.inventoryservice.domain.model.Product;
@@ -14,6 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -29,6 +32,8 @@ public class ReserveInventoryService implements ReserveInventoryUseCase {
     @Transactional
     public void execute(OrderCreatedEvent orderCreatedEvent) {
 
+        List<ReservedItem> reservedItems = new ArrayList<>();
+
         for (OrderItem orderItem : orderCreatedEvent.items()) {
 
             Product product = null;
@@ -41,13 +46,15 @@ public class ReserveInventoryService implements ReserveInventoryUseCase {
 
                 productRepository.save(product);
 
-                InventoryReservationSuccessEvent reservedSuccessEvent = new InventoryReservationSuccessEvent(UUID.randomUUID(), "InventoryReservedSuccessEvent", "1.0", OffsetDateTime.now(), orderCreatedEvent.orderId(), product.getId());
+                reservedItems.add(new ReservedItem(product.getId(), orderItem.getQuantity()));
+
+                InventoryReservationSuccessEvent reservedSuccessEvent = new InventoryReservationSuccessEvent(UUID.randomUUID(), "INVENTORY_RESERVED", "1.0", OffsetDateTime.now(), orderCreatedEvent.orderId(), product.getId());
 
                 reserveInventoryEventService.publishSuccess(reservedSuccessEvent);
 
             } catch (Exception exception) {
 
-                InventoryReservationFailedEvent reservedFailedEvent = new InventoryReservationFailedEvent(UUID.randomUUID(), "InventoryReservationFailedEvent", "1.0", OffsetDateTime.now(), orderCreatedEvent.orderId(), orderItem.getProductId(), exception.getMessage());
+                InventoryReservationFailedEvent reservedFailedEvent = new InventoryReservationFailedEvent(UUID.randomUUID(), "INVENTORY_RESERVATION_FAILED", "1.0", OffsetDateTime.now(), orderCreatedEvent.orderId(), orderItem.getProductId(), exception.getMessage());
 
                 reserveInventoryEventService.publishFailure(reservedFailedEvent);
 

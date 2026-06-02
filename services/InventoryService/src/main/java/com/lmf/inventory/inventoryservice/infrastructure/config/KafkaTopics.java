@@ -9,5 +9,5 @@ public final class KafkaTopics {
 
     public static final String INVENTORY_RESERVED = "inventory.reserved";
 
-    public static final String INVENTORY_RESERVATION_FAILED = "inventory.reservation.failed";
+    public static final String INVENTORY_RESERVATION_DLT = "inventory.reservation.dlt";
 }

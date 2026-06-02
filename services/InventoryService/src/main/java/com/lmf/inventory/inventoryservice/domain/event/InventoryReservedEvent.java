@@ -1,9 +1,10 @@
 package com.lmf.inventory.inventoryservice.domain.event;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
-public record InventoryReservationFailedEvent(
+public record InventoryReservedEvent(
 
         UUID eventId,
 
@@ -15,7 +16,7 @@ public record InventoryReservationFailedEvent(
 
         UUID orderId,
 
-        UUID productId,
+        List<ReservedItem> items
 
-        String reason) implements EventMessage {
+) implements EventMessage {
 }

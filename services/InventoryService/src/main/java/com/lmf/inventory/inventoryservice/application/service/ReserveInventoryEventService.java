@@ -25,21 +25,21 @@ public class ReserveInventoryEventService {
 
     public void publishSuccess(InventoryReservationSuccessEvent inventoryReservationSuccessEvent) {
 
-        saveOutbox(inventoryReservationSuccessEvent.orderId(), "RESERVED_SUCCESS", inventoryReservationSuccessEvent);
+        saveOutbox(inventoryReservationSuccessEvent.orderId(), "RESERVED_SUCCESS", inventoryReservationSuccessEvent, OutboxStatus.PENDING);
     }
 
     public void publishFailure(InventoryReservationFailedEvent inventoryReservationFailedEvent) {
 
-        saveOutbox(inventoryReservationFailedEvent.orderId(), "RESERVED_FAILED", inventoryReservationFailedEvent);
+        saveOutbox(inventoryReservationFailedEvent.orderId(), "RESERVED_FAILED", inventoryReservationFailedEvent, OutboxStatus.FAILED);
     }
 
-    private void saveOutbox(UUID aggregateId, String eventType, Object payloadObject) {
+    private void saveOutbox(UUID aggregateId, String eventType, Object payloadObject, OutboxStatus outboxStatus) {
 
         try {
 
             String payload = objectMapper.writeValueAsString(payloadObject);
 
-            OutboxEventEntity outboxEventEntity = new OutboxEventEntity(aggregateId, "ORDER", eventType, payload, OutboxStatus.PENDING);
+            OutboxEventEntity outboxEventEntity = new OutboxEventEntity(aggregateId, "ORDER", eventType, payload, outboxStatus);
 
             outboxEventRepository.save(outboxEventEntity);
 

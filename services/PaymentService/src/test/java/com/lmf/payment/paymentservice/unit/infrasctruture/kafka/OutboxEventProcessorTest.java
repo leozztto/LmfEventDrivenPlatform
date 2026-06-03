@@ -16,7 +16,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
-import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -63,7 +62,7 @@ class OutboxEventProcessorTest {
 
         verify(outboxEventRepository, times(2)).update(outboxEventEntity);
 
-        verify(paymentEventPublisher).publish(eq(KafkaTopics.PAYMENT_CREATED), eq(outboxEventEntity.getAggregateId().toString()), eq(outboxEventEntity.getPayload()));
+        verify(paymentEventPublisher).publish(eq(KafkaTopics.PAYMENT_PROCESSED), eq(outboxEventEntity.getAggregateId().toString()), eq(outboxEventEntity.getPayload()));
 
         assertEquals(OutboxStatus.PUBLISHED, outboxEventEntity.getOutboxStatus());
     }
@@ -102,7 +101,7 @@ class OutboxEventProcessorTest {
 
         when(outboxEventRepository.findTop100ByOutboxStatusOrderByCreatedAtAsc(OutboxStatus.PENDING)).thenReturn(List.of(outboxEventEntity));
 
-        doThrow(new RuntimeException("Permanent failure")).when(paymentEventPublisher).publish(eq(KafkaTopics.PAYMENT_CREATED), anyString(), anyString());
+        doThrow(new RuntimeException("Permanent failure")).when(paymentEventPublisher).publish(eq(KafkaTopics.PAYMENT_PROCESSED), anyString(), anyString());
 
         outboxEventProcessor.process();
 
@@ -112,8 +111,8 @@ class OutboxEventProcessorTest {
 
         List<String> publishedTopics = topicCaptor.getAllValues();
 
-        assertEquals(KafkaTopics.PAYMENT_CREATED, publishedTopics.get(0));
-        assertEquals(KafkaTopics.PAYMENT_CREATED_DLT, publishedTopics.get(1));
+        assertEquals(KafkaTopics.PAYMENT_PROCESSED, publishedTopics.get(0));
+        assertEquals(KafkaTopics.PAYMENT_FAILED_DLT, publishedTopics.get(1));
 
         assertEquals(OutboxStatus.DLT, outboxEventEntity.getOutboxStatus());
     }

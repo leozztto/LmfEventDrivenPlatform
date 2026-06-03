@@ -4,8 +4,10 @@ import com.lmf.payment.paymentservice.application.command.ProcessPaymentCommand;
 import com.lmf.payment.paymentservice.application.service.InboxEventService;
 import com.lmf.payment.paymentservice.application.usecase.ProcessPaymentUseCase;
 import com.lmf.payment.paymentservice.domain.model.PaymentMethod;
-import com.lmf.payment.paymentservice.events.*;
-import com.lmf.payment.paymentservice.infrastructure.kafka.consumer.OrderCreatedConsumer;
+import com.lmf.payment.paymentservice.events.InventoryReservedEvent;
+import com.lmf.payment.paymentservice.events.PaymentInfo;
+import com.lmf.payment.paymentservice.events.ReservedItem;
+import com.lmf.payment.paymentservice.infrastructure.kafka.consumer.InventoryReservedConsumer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,17 +19,16 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class OrderCreatedConsumerTest {
+class InventoryReservedConsumerTest {
 
     private ProcessPaymentUseCase processPaymentUseCase;
 
     private InboxEventService inboxEventService;
 
-    private OrderCreatedConsumer orderCreatedConsumer;
+    private InventoryReservedConsumer inventoryReservedConsumer;
 
     @BeforeEach
     void setUp() {
@@ -36,24 +37,24 @@ class OrderCreatedConsumerTest {
 
         inboxEventService = mock(InboxEventService.class);
 
-        orderCreatedConsumer = new OrderCreatedConsumer(processPaymentUseCase, inboxEventService);
+        inventoryReservedConsumer = new InventoryReservedConsumer(inboxEventService, processPaymentUseCase);
     }
 
     @Test
     @DisplayName("Deve processar evento com sucesso")
     void shouldProcessEventSuccessfully() {
 
-        OrderCreatedEvent orderCreatedEvent = buildEvent();
+        InventoryReservedEvent event = buildEvent();
 
-        when(inboxEventService.isDuplicate(orderCreatedEvent.eventId().toString())).thenReturn(false);
+        when(inboxEventService.isDuplicate(event.eventId().toString())).thenReturn(false);
 
-        orderCreatedConsumer.consume(orderCreatedEvent, orderCreatedEvent.orderId().toString());
+        inventoryReservedConsumer.consume(event);
 
-        verify(inboxEventService).register(orderCreatedEvent.eventId().toString(), orderCreatedEvent.orderId(), "ORDER_CREATED");
+        verify(inboxEventService).register(event.eventId().toString(), event.orderId(), event.eventType());
 
         verify(processPaymentUseCase).execute(any(ProcessPaymentCommand.class));
 
-        verify(inboxEventService).markProcessed(orderCreatedEvent.eventId().toString());
+        verify(inboxEventService).markProcessed(event.eventId().toString());
 
         verify(inboxEventService, never()).markFailed(any(), any());
     }
@@ -62,13 +63,13 @@ class OrderCreatedConsumerTest {
     @DisplayName("Deve ignorar evento duplicado")
     void shouldIgnoreDuplicatedEvent() {
 
-        OrderCreatedEvent orderCreatedEvent = buildEvent();
+        InventoryReservedEvent event = buildEvent();
 
-        when(inboxEventService.isDuplicate(orderCreatedEvent.eventId().toString())).thenReturn(true);
+        when(inboxEventService.isDuplicate(event.eventId().toString())).thenReturn(true);
 
-        orderCreatedConsumer.consume(orderCreatedEvent, orderCreatedEvent.orderId().toString());
+        inventoryReservedConsumer.consume(event);
 
-        verify(inboxEventService).isDuplicate(orderCreatedEvent.eventId().toString());
+        verify(inboxEventService).isDuplicate(event.eventId().toString());
 
         verify(inboxEventService, never()).register(any(), any(), any());
 
@@ -83,51 +84,55 @@ class OrderCreatedConsumerTest {
     @DisplayName("Deve marcar evento como falho quando ocorrer erro")
     void shouldMarkEventAsFailedWhenErrorOccurs() {
 
-        OrderCreatedEvent orderCreatedEvent = buildEvent();
+        InventoryReservedEvent event = buildEvent();
 
-        when(inboxEventService.isDuplicate(orderCreatedEvent.eventId().toString())).thenReturn(false);
+        when(inboxEventService.isDuplicate(event.eventId().toString())).thenReturn(false);
 
         doThrow(new RuntimeException("Gateway timeout")).when(processPaymentUseCase).execute(any(ProcessPaymentCommand.class));
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> orderCreatedConsumer.consume(orderCreatedEvent, orderCreatedEvent.orderId().toString()));
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> inventoryReservedConsumer.consume(event));
 
         assertEquals("Gateway timeout", exception.getMessage());
 
-        verify(inboxEventService).markFailed(orderCreatedEvent.eventId().toString(), "Gateway timeout");
+        verify(inboxEventService).markFailed(event.eventId().toString(), "Gateway timeout");
 
         verify(inboxEventService, never()).markProcessed(any());
     }
 
     @Test
-    @DisplayName("Deve converter evento para ProcessPaymentCommand corretamente")
+    @DisplayName("Deve converter InventoryReservedEvent para ProcessPaymentCommand")
     void shouldConvertEventToProcessPaymentCommandCorrectly() {
 
-        OrderCreatedEvent orderCreatedEvent = buildEvent();
+        InventoryReservedEvent event = buildEvent();
 
-        when(inboxEventService.isDuplicate(orderCreatedEvent.eventId().toString())).thenReturn(false);
+        when(inboxEventService.isDuplicate(event.eventId().toString())).thenReturn(false);
 
         ArgumentCaptor<ProcessPaymentCommand> captor = ArgumentCaptor.forClass(ProcessPaymentCommand.class);
 
-        orderCreatedConsumer.consume(orderCreatedEvent, orderCreatedEvent.orderId().toString());
+        inventoryReservedConsumer.consume(event);
 
         verify(processPaymentUseCase).execute(captor.capture());
 
         ProcessPaymentCommand command = captor.getValue();
 
-        assertEquals(orderCreatedEvent.orderId(), command.orderId());
+        assertEquals(event.orderId(), command.orderId());
 
-        assertEquals(orderCreatedEvent.customer().customerId(), command.customerId());
+        assertEquals(event.eventId(), command.eventId());
 
-        assertEquals(orderCreatedEvent.totalAmount(), command.amount());
+        assertEquals(event.eventType(), command.eventType());
+
+        assertEquals(event.customerId(), command.customerId());
+
+        assertEquals(event.totalAmount(), command.amount());
 
         assertEquals("BRL", command.currency());
 
-        assertEquals(orderCreatedEvent.payment().paymentMethod(), command.paymentMethod());
+        assertEquals(event.payment().paymentMethod(), command.paymentMethod());
 
-        assertEquals(orderCreatedEvent.payment().installments(), command.installments());
+        assertEquals(event.payment().installments(), command.installments());
     }
 
-    private OrderCreatedEvent buildEvent() {
+    private InventoryReservedEvent buildEvent() {
 
         UUID eventId = UUID.randomUUID();
 
@@ -135,6 +140,6 @@ class OrderCreatedConsumerTest {
 
         UUID customerId = UUID.randomUUID();
 
-        return new OrderCreatedEvent(eventId, "ORDER_CREATED", "1.0", OffsetDateTime.now(ZoneOffset.UTC), orderId, "CREATED", new BigDecimal("299.90"), new CustomerInfo(customerId, "Leandro Franceschetto", "leandro@email.com", "11999999999"), new ShippingAddress("Rua das Flores", "123", "São Paulo", "SP", "01010-000"), new PaymentInfo(PaymentMethod.fromName("CREDIT_CARD"), 3, new BigDecimal("299.90")), List.of(new OrderItem(UUID.randomUUID(), 1, new BigDecimal("250.00")), new OrderItem(UUID.randomUUID(), 1, new BigDecimal("49.90"))));
+        return new InventoryReservedEvent(eventId, "INVENTORY_RESERVED", "1.0", OffsetDateTime.now(ZoneOffset.UTC), orderId, customerId, new BigDecimal("299.90"), new PaymentInfo(PaymentMethod.CREDIT_CARD, 3, new BigDecimal("299.90")), List.of(new ReservedItem(UUID.randomUUID(), 1), new ReservedItem(UUID.randomUUID(), 2)));
     }
 }

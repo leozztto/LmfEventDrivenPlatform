@@ -19,6 +19,7 @@ class PaymentCreationServiceTest {
 
     @BeforeEach
     void setUp() {
+
         paymentCreationService = new PaymentCreationService();
     }
 
@@ -29,18 +30,20 @@ class PaymentCreationServiceTest {
         UUID orderId = UUID.randomUUID();
         UUID customerId = UUID.randomUUID();
 
-        ProcessPaymentCommand processPaymentCommand = new ProcessPaymentCommand(orderId, customerId, BigDecimal.valueOf(150.75), "BRL", PaymentMethod.MERCAD_PAGO, 3);
+        ProcessPaymentCommand command = new ProcessPaymentCommand(orderId, UUID.randomUUID(), "INVENTORY_RESERVED", customerId, BigDecimal.valueOf(150.75), "BRL", PaymentMethod.MERCAD_PAGO, 3);
 
-        Payment payment = paymentCreationService.create(processPaymentCommand);
+        Payment payment = paymentCreationService.create(command);
 
         assertNotNull(payment);
         assertNotNull(payment.getId());
 
         assertEquals(orderId, payment.getOrderId());
         assertEquals(customerId, payment.getCustomerId());
+
         assertEquals(BigDecimal.valueOf(150.75), payment.getAmount());
 
         assertEquals("BRL", payment.getCurrency());
+
         assertEquals(PaymentMethod.MERCAD_PAGO, payment.getPaymentMethod());
 
         assertEquals(3, payment.getInstallments());
@@ -52,14 +55,16 @@ class PaymentCreationServiceTest {
     @DisplayName("Deve criar pagamento com uma parcela")
     void shouldCreatePaymentWithOneInstallment() {
 
-        ProcessPaymentCommand processPaymentCommand = new ProcessPaymentCommand(UUID.randomUUID(), UUID.randomUUID(), BigDecimal.valueOf(50), "USD", PaymentMethod.CREDIT_CARD, 1);
+        ProcessPaymentCommand command = new ProcessPaymentCommand(UUID.randomUUID(), UUID.randomUUID(), "INVENTORY_RESERVED", UUID.randomUUID(), BigDecimal.valueOf(50), "USD", PaymentMethod.CREDIT_CARD, 1);
 
-        Payment payment = paymentCreationService.create(processPaymentCommand);
+        Payment payment = paymentCreationService.create(command);
 
         assertNotNull(payment);
 
         assertEquals(1, payment.getInstallments());
+
         assertEquals("USD", payment.getCurrency());
+
         assertEquals(PaymentMethod.CREDIT_CARD, payment.getPaymentMethod());
     }
 
@@ -67,9 +72,9 @@ class PaymentCreationServiceTest {
     @DisplayName("Deve criar pagamento mantendo provider fixo")
     void shouldCreatePaymentKeepingFixedProvider() {
 
-        ProcessPaymentCommand processPaymentCommand = new ProcessPaymentCommand(UUID.randomUUID(), UUID.randomUUID(), BigDecimal.valueOf(999), "BRL", PaymentMethod.PIX, 1);
+        ProcessPaymentCommand command = new ProcessPaymentCommand(UUID.randomUUID(), UUID.randomUUID(), "INVENTORY_RESERVED", UUID.randomUUID(), BigDecimal.valueOf(999), "BRL", PaymentMethod.PIX, 1);
 
-        Payment payment = paymentCreationService.create(processPaymentCommand);
+        Payment payment = paymentCreationService.create(command);
 
         assertEquals("MERCADO_PAGO", payment.getProvider());
     }

@@ -53,15 +53,15 @@ public class OutboxEventProcessor {
 
             outboxEventRepository.update(outboxEventEntity);
 
-            log.info("Publishing event to Kafka. topic={}, aggregateId={}, eventType={}, eventId={}", KafkaTopics.PAYMENT_CREATED, outboxEventEntity.getAggregateId(), outboxEventEntity.getEventType(), outboxEventEntity.getId());
+            log.info("Publishing event to Kafka. topic={}, aggregateId={}, eventType={}, eventId={}", KafkaTopics.PAYMENT_PROCESSED, outboxEventEntity.getAggregateId(), outboxEventEntity.getEventType(), outboxEventEntity.getId());
 
-            paymentEventPublisher.publish(KafkaTopics.PAYMENT_CREATED, outboxEventEntity.getAggregateId().toString(), outboxEventEntity.getPayload());
+            paymentEventPublisher.publish(KafkaTopics.PAYMENT_PROCESSED, outboxEventEntity.getAggregateId().toString(), outboxEventEntity.getPayload());
 
             outboxEventEntity.markAsPublished();
 
             outboxEventRepository.update(outboxEventEntity);
 
-            log.info("Outbox event published successfully. eventId={}, aggregateId={}, eventType={}, topic={}, status={}", outboxEventEntity.getId(), outboxEventEntity.getAggregateId(), outboxEventEntity.getEventType(), KafkaTopics.PAYMENT_CREATED, outboxEventEntity.getOutboxStatus());
+            log.info("Outbox event published successfully. eventId={}, aggregateId={}, eventType={}, topic={}, status={}", outboxEventEntity.getId(), outboxEventEntity.getAggregateId(), outboxEventEntity.getEventType(), KafkaTopics.PAYMENT_PROCESSED, outboxEventEntity.getOutboxStatus());
 
         } catch (Exception ex) {
 
@@ -94,8 +94,8 @@ public class OutboxEventProcessor {
 
         DltEvent dltEvent = new DltEvent(outboxEventEntity.getId(), outboxEventEntity.getAggregateId(), outboxEventEntity.getEventType(), outboxEventEntity.getPayload(), outboxEventEntity.getErrorMessage(), outboxEventEntity.getRetryCount(), OffsetDateTime.now());
 
-        paymentEventPublisher.publish(KafkaTopics.PAYMENT_CREATED_DLT, outboxEventEntity.getAggregateId().toString(), dltEvent.toString());
+        paymentEventPublisher.publish(KafkaTopics.PAYMENT_FAILED_DLT, outboxEventEntity.getAggregateId().toString(), dltEvent.toString());
 
-        log.error("Event published to DLT topic. eventId={}, dltTopic={}", outboxEventEntity.getId(), KafkaTopics.PAYMENT_CREATED_DLT);
+        log.error("Event published to DLT topic. eventId={}, dltTopic={}", outboxEventEntity.getId(), KafkaTopics.PAYMENT_FAILED_DLT);
     }
 }

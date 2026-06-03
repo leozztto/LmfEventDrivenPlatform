@@ -17,6 +17,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 class ProcessPaymentUseCaseTest {
@@ -160,6 +161,14 @@ class ProcessPaymentUseCaseTest {
 
     private ProcessPaymentCommand buildCommand() {
 
-        return new ProcessPaymentCommand(UUID.randomUUID(), UUID.randomUUID(), BigDecimal.valueOf(100), "BRL", PaymentMethod.CREDIT_CARD, 1);
+        return new ProcessPaymentCommand(UUID.randomUUID(),          // orderId
+                UUID.randomUUID(),          // eventId
+                "INVENTORY_RESERVED",       // eventType
+                UUID.randomUUID(),          // customerId
+                BigDecimal.valueOf(100),    // amount
+                "BRL",                      // currency
+                PaymentMethod.CREDIT_CARD,  // paymentMethod
+                1                           // installments
+        );
     }
 }

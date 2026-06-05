@@ -117,6 +117,8 @@ PENDING -> PROCESSING -> APPROVED
 - Spring Batch
 - Hibernate
 
+---
+
 ## Mensageria e Event Streaming
 
 - Apache Kafka

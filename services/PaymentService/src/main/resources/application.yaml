@@ -22,7 +22,7 @@ spring:
 
       properties:
         spring.json.trusted.packages: "*"
-        spring.json.value.default.type: com.lmf.payment.paymentservice.events.OrderCreatedEvent
+        spring.json.value.default.type: com.lmf.payment.paymentservice.events.InventoryReservedEvent
 
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer

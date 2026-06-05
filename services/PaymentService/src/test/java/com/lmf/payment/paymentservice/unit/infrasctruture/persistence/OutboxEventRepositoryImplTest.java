@@ -94,13 +94,13 @@ class OutboxEventRepositoryImplTest {
 
         UUID id = UUID.randomUUID();
 
-        when(springDataOutboxEventRepository.getReferenceById(id)).thenReturn(outboxEventEntity);
+        when(springDataOutboxEventRepository.findById(id)).thenReturn(Optional.of(outboxEventEntity));
 
         Optional<OutboxEventEntity> result = outboxEventRepository.findById(id);
 
         assertTrue(result.isPresent());
         assertEquals(outboxEventEntity, result.get());
 
-        verify(springDataOutboxEventRepository).getReferenceById(id);
+        verify(springDataOutboxEventRepository).findById(id);
     }
 }

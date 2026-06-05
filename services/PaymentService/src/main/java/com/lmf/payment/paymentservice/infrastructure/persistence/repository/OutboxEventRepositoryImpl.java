@@ -39,6 +39,6 @@ public class OutboxEventRepositoryImpl implements OutboxEventRepository {
 
     @Override
     public Optional<OutboxEventEntity> findById(UUID id) {
-        return Optional.of(springDataOutboxEventRepository.getReferenceById(id));
+        return springDataOutboxEventRepository.findById(id);
     }
 }

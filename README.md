@@ -85,6 +85,39 @@ PENDING -> PROCESSING -> APPROVED
 
 ## Inventory Service
 
+Inventory management microservice built with Domain-Driven Design (DDD), Event-Driven Architecture and Clean Architecture principles using Spring Boot.
+
+This service is responsible for managing product inventory, stock reservations and inventory consistency across distributed services.
+
+### Features
+
+- Product registration and management
+- Inventory reservation workflow
+- Manual stock movement operations
+- Available and reserved stock control
+- Kafka-based asynchronous communication
+- Transactional Outbox Pattern
+- Inbox Pattern for idempotent event consumption
+- Inventory reservation success/failure events
+- Retry and Dead Letter Topic (DLT) support
+- Global exception handling
+- PostgreSQL persistence with Flyway migrations
+- Observability with structured logging
+- Integration testing with Testcontainers
+
+### Inventory Lifecycle
+
+```text
+AVAILABLE
+    |
+    v
+RESERVED
+    |
+    +--> RELEASED
+    |
+    +--> CONFIRMED
+```
+
 ---
 
 ## Gateway Service

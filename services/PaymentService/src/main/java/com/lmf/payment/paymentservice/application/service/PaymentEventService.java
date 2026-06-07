@@ -2,9 +2,9 @@ package com.lmf.payment.paymentservice.application.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.lmf.payment.paymentservice.application.event.PaymentApprovedEvent;
-import com.lmf.payment.paymentservice.application.event.PaymentFailedEvent;
-import com.lmf.payment.paymentservice.application.event.PaymentProcessingEvent;
+import com.lmf.payment.paymentservice.domain.model.event.PaymentApprovedEvent;
+import com.lmf.payment.paymentservice.domain.model.event.PaymentFailedEvent;
+import com.lmf.payment.paymentservice.domain.model.event.PaymentProcessingEvent;
 import com.lmf.payment.paymentservice.domain.exception.EventSerializationException;
 import com.lmf.payment.paymentservice.domain.model.Payment;
 import com.lmf.payment.paymentservice.domain.repository.OutboxEventRepository;

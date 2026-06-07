@@ -1,4 +1,4 @@
-package com.lmf.payment.paymentservice.application.event;
+package com.lmf.payment.paymentservice.domain.model.event;
 
 import com.lmf.payment.paymentservice.domain.model.PaymentMethod;
 
@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-public record PaymentProcessingEvent(
+public record PaymentApprovedEvent(
 
         UUID paymentId,
 
@@ -20,7 +20,11 @@ public record PaymentProcessingEvent(
 
         PaymentMethod paymentMethod,
 
-        OffsetDateTime occurredAt
+        String transactionId,
+
+        String provider,
+
+        OffsetDateTime approvedAt
 
 ) {
 }

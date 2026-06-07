@@ -1,4 +1,4 @@
-package com.lmf.payment.paymentservice.application.event;
+package com.lmf.payment.paymentservice.domain.model.event;
 
 import com.lmf.payment.paymentservice.domain.model.PaymentMethod;
 import com.lmf.payment.paymentservice.domain.model.PaymentStatus;

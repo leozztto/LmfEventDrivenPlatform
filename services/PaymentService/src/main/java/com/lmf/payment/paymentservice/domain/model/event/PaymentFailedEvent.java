@@ -1,4 +1,4 @@
-package com.lmf.payment.paymentservice.application.event;
+package com.lmf.payment.paymentservice.domain.model.event;
 
 import com.lmf.payment.paymentservice.domain.model.PaymentMethod;
 
@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-public record PaymentApprovedEvent(
+public record PaymentFailedEvent(
 
         UUID paymentId,
 
@@ -20,11 +20,11 @@ public record PaymentApprovedEvent(
 
         PaymentMethod paymentMethod,
 
-        String transactionId,
+        String failureReason,
 
-        String provider,
+        String gatewayStatus,
 
-        OffsetDateTime approvedAt
+        OffsetDateTime failedAt
 
 ) {
 }

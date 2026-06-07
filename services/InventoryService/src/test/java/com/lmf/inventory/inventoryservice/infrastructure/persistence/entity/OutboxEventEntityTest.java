@@ -16,164 +16,164 @@ class OutboxEventEntityTest {
 
         UUID aggregateId = UUID.randomUUID();
 
-        OutboxEventEntity entity = new OutboxEventEntity(aggregateId, "PRODUCT", "PRODUCT_CREATED", "{\"id\":1}", OutboxStatus.PENDING);
+        OutboxEventEntity outboxEventEntity = new OutboxEventEntity(aggregateId, "PRODUCT", "PRODUCT_CREATED", "{\"id\":1}", OutboxStatus.PENDING);
 
-        assertThat(entity.getId()).isNotNull();
+        assertThat(outboxEventEntity.getId()).isNotNull();
 
-        assertThat(entity.getAggregateId()).isEqualTo(aggregateId);
+        assertThat(outboxEventEntity.getAggregateId()).isEqualTo(aggregateId);
 
-        assertThat(entity.getAggregateType()).isEqualTo("PRODUCT");
+        assertThat(outboxEventEntity.getAggregateType()).isEqualTo("PRODUCT");
 
-        assertThat(entity.getEventType()).isEqualTo("PRODUCT_CREATED");
+        assertThat(outboxEventEntity.getEventType()).isEqualTo("PRODUCT_CREATED");
 
-        assertThat(entity.getPayload()).isEqualTo("{\"id\":1}");
+        assertThat(outboxEventEntity.getPayload()).isEqualTo("{\"id\":1}");
 
-        assertThat(entity.getOutboxStatus()).isEqualTo(OutboxStatus.PENDING);
+        assertThat(outboxEventEntity.getOutboxStatus()).isEqualTo(OutboxStatus.PENDING);
 
-        assertThat(entity.getRetryCount()).isZero();
+        assertThat(outboxEventEntity.getRetryCount()).isZero();
 
-        assertThat(entity.getCreatedAt()).isNotNull();
+        assertThat(outboxEventEntity.getCreatedAt()).isNotNull();
 
-        assertThat(entity.getErrorMessage()).isNull();
+        assertThat(outboxEventEntity.getErrorMessage()).isNull();
     }
 
     @Test
     @DisplayName("Should mark event as processing")
     void shouldMarkEventAsProcessing() {
 
-        OutboxEventEntity entity = createEntity();
+        OutboxEventEntity outboxEventEntity = createEntity();
 
-        entity.markAsProcessing();
+        outboxEventEntity.markAsProcessing();
 
-        assertThat(entity.getOutboxStatus()).isEqualTo(OutboxStatus.PROCESSING);
+        assertThat(outboxEventEntity.getOutboxStatus()).isEqualTo(OutboxStatus.PROCESSING);
     }
 
     @Test
     @DisplayName("Should mark event as published")
     void shouldMarkEventAsPublished() {
 
-        OutboxEventEntity entity = createEntity();
+        OutboxEventEntity outboxEventEntity = createEntity();
 
-        entity.markAsPublished();
+        outboxEventEntity.markAsPublished();
 
-        assertThat(entity.getOutboxStatus()).isEqualTo(OutboxStatus.PUBLISHED);
+        assertThat(outboxEventEntity.getOutboxStatus()).isEqualTo(OutboxStatus.PUBLISHED);
     }
 
     @Test
     @DisplayName("Should mark event as failed on first retry")
     void shouldMarkEventAsFailedOnFirstRetry() {
 
-        OutboxEventEntity entity = createEntity();
+        OutboxEventEntity outboxEventEntity = createEntity();
 
-        entity.markAsFailed("Kafka unavailable");
+        outboxEventEntity.markAsFailed("Kafka unavailable");
 
-        assertThat(entity.getRetryCount()).isEqualTo(1);
+        assertThat(outboxEventEntity.getRetryCount()).isEqualTo(1);
 
-        assertThat(entity.getErrorMessage()).isEqualTo("Kafka unavailable");
+        assertThat(outboxEventEntity.getErrorMessage()).isEqualTo("Kafka unavailable");
 
-        assertThat(entity.getOutboxStatus()).isEqualTo(OutboxStatus.FAILED);
+        assertThat(outboxEventEntity.getOutboxStatus()).isEqualTo(OutboxStatus.FAILED);
     }
 
     @Test
     @DisplayName("Should mark event as failed on second retry")
     void shouldMarkEventAsFailedOnSecondRetry() {
 
-        OutboxEventEntity entity = createEntity();
+        OutboxEventEntity outboxEventEntity = createEntity();
 
-        entity.markAsFailed("error 1");
-        entity.markAsFailed("error 2");
+        outboxEventEntity.markAsFailed("error 1");
+        outboxEventEntity.markAsFailed("error 2");
 
-        assertThat(entity.getRetryCount()).isEqualTo(2);
+        assertThat(outboxEventEntity.getRetryCount()).isEqualTo(2);
 
-        assertThat(entity.getErrorMessage()).isEqualTo("error 2");
+        assertThat(outboxEventEntity.getErrorMessage()).isEqualTo("error 2");
 
-        assertThat(entity.getOutboxStatus()).isEqualTo(OutboxStatus.FAILED);
+        assertThat(outboxEventEntity.getOutboxStatus()).isEqualTo(OutboxStatus.FAILED);
     }
 
     @Test
     @DisplayName("Should move event to DLT after third retry")
     void shouldMoveEventToDltAfterThirdRetry() {
 
-        OutboxEventEntity entity = createEntity();
+        OutboxEventEntity outboxEventEntity = createEntity();
 
-        entity.markAsFailed("error 1");
-        entity.markAsFailed("error 2");
-        entity.markAsFailed("error 3");
+        outboxEventEntity.markAsFailed("error 1");
+        outboxEventEntity.markAsFailed("error 2");
+        outboxEventEntity.markAsFailed("error 3");
 
-        assertThat(entity.getRetryCount()).isEqualTo(3);
+        assertThat(outboxEventEntity.getRetryCount()).isEqualTo(3);
 
-        assertThat(entity.getErrorMessage()).isEqualTo("error 3");
+        assertThat(outboxEventEntity.getErrorMessage()).isEqualTo("error 3");
 
-        assertThat(entity.getOutboxStatus()).isEqualTo(OutboxStatus.DLT);
+        assertThat(outboxEventEntity.getOutboxStatus()).isEqualTo(OutboxStatus.DLT);
     }
 
     @Test
     @DisplayName("Should keep DLT status after additional failures")
     void shouldKeepDltStatusAfterAdditionalFailures() {
 
-        OutboxEventEntity entity = createEntity();
+        OutboxEventEntity outboxEventEntity = createEntity();
 
-        entity.markAsFailed("error 1");
-        entity.markAsFailed("error 2");
-        entity.markAsFailed("error 3");
-        entity.markAsFailed("error 4");
+        outboxEventEntity.markAsFailed("error 1");
+        outboxEventEntity.markAsFailed("error 2");
+        outboxEventEntity.markAsFailed("error 3");
+        outboxEventEntity.markAsFailed("error 4");
 
-        assertThat(entity.getRetryCount()).isEqualTo(4);
+        assertThat(outboxEventEntity.getRetryCount()).isEqualTo(4);
 
-        assertThat(entity.getOutboxStatus()).isEqualTo(OutboxStatus.DLT);
+        assertThat(outboxEventEntity.getOutboxStatus()).isEqualTo(OutboxStatus.DLT);
 
-        assertThat(entity.getErrorMessage()).isEqualTo("error 4");
+        assertThat(outboxEventEntity.getErrorMessage()).isEqualTo("error 4");
     }
 
     @Test
     @DisplayName("Should mark event as pending retry")
     void shouldMarkEventAsPendingRetry() {
 
-        OutboxEventEntity entity = createEntity();
+        OutboxEventEntity outboxEventEntity = createEntity();
 
-        entity.markAsFailed("temporary error");
+        outboxEventEntity.markAsFailed("temporary error");
 
-        entity.markAsPendingRetry();
+        outboxEventEntity.markAsPendingRetry();
 
-        assertThat(entity.getOutboxStatus()).isEqualTo(OutboxStatus.PENDING);
+        assertThat(outboxEventEntity.getOutboxStatus()).isEqualTo(OutboxStatus.PENDING);
 
-        assertThat(entity.getRetryCount()).isEqualTo(1);
+        assertThat(outboxEventEntity.getRetryCount()).isEqualTo(1);
 
-        assertThat(entity.getErrorMessage()).isEqualTo("temporary error");
+        assertThat(outboxEventEntity.getErrorMessage()).isEqualTo("temporary error");
     }
 
     @Test
     @DisplayName("Should transition processing failed pending retry")
     void shouldTransitionProcessingFailedPendingRetry() {
 
-        OutboxEventEntity entity = createEntity();
+        OutboxEventEntity outboxEventEntity = createEntity();
 
-        entity.markAsProcessing();
+        outboxEventEntity.markAsProcessing();
 
-        assertThat(entity.getOutboxStatus()).isEqualTo(OutboxStatus.PROCESSING);
+        assertThat(outboxEventEntity.getOutboxStatus()).isEqualTo(OutboxStatus.PROCESSING);
 
-        entity.markAsFailed("temporary error");
+        outboxEventEntity.markAsFailed("temporary error");
 
-        assertThat(entity.getOutboxStatus()).isEqualTo(OutboxStatus.FAILED);
+        assertThat(outboxEventEntity.getOutboxStatus()).isEqualTo(OutboxStatus.FAILED);
 
-        entity.markAsPendingRetry();
+        outboxEventEntity.markAsPendingRetry();
 
-        assertThat(entity.getOutboxStatus()).isEqualTo(OutboxStatus.PENDING);
+        assertThat(outboxEventEntity.getOutboxStatus()).isEqualTo(OutboxStatus.PENDING);
     }
 
     @Test
     @DisplayName("Should transition processing published")
     void shouldTransitionProcessingPublished() {
 
-        OutboxEventEntity entity = createEntity();
+        OutboxEventEntity outboxEventEntity = createEntity();
 
-        entity.markAsProcessing();
+        outboxEventEntity.markAsProcessing();
 
-        assertThat(entity.getOutboxStatus()).isEqualTo(OutboxStatus.PROCESSING);
+        assertThat(outboxEventEntity.getOutboxStatus()).isEqualTo(OutboxStatus.PROCESSING);
 
-        entity.markAsPublished();
+        outboxEventEntity.markAsPublished();
 
-        assertThat(entity.getOutboxStatus()).isEqualTo(OutboxStatus.PUBLISHED);
+        assertThat(outboxEventEntity.getOutboxStatus()).isEqualTo(OutboxStatus.PUBLISHED);
     }
 
     private OutboxEventEntity createEntity() {

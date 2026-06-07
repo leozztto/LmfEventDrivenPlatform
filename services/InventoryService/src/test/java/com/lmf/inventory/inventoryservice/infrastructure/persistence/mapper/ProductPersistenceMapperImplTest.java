@@ -22,29 +22,29 @@ class ProductPersistenceMapperImplTest {
 
         Product product = Product.restore(UUID.randomUUID(), "SKU-001", "Notebook", "Notebook Gamer", BigDecimal.valueOf(5000), 10, 3, ProductStatus.ACTIVE, OffsetDateTime.now().minusDays(1), OffsetDateTime.now());
 
-        ProductEntity entity = mapper.toEntity(product);
+        ProductEntity productEntity = mapper.toEntity(product);
 
-        assertThat(entity).isNotNull();
+        assertThat(productEntity).isNotNull();
 
-        assertThat(entity.getId()).isEqualTo(product.getId());
+        assertThat(productEntity.getId()).isEqualTo(product.getId());
 
-        assertThat(entity.getSku()).isEqualTo(product.getSku());
+        assertThat(productEntity.getSku()).isEqualTo(product.getSku());
 
-        assertThat(entity.getName()).isEqualTo(product.getName());
+        assertThat(productEntity.getName()).isEqualTo(product.getName());
 
-        assertThat(entity.getDescription()).isEqualTo(product.getDescription());
+        assertThat(productEntity.getDescription()).isEqualTo(product.getDescription());
 
-        assertThat(entity.getPrice()).isEqualTo(product.getPrice());
+        assertThat(productEntity.getPrice()).isEqualTo(product.getPrice());
 
-        assertThat(entity.getAvailableQuantity()).isEqualTo(product.getProductStock().getAvailableQuantity());
+        assertThat(productEntity.getAvailableQuantity()).isEqualTo(product.getProductStock().getAvailableQuantity());
 
-        assertThat(entity.getReservedQuantity()).isEqualTo(product.getProductStock().getReservedQuantity());
+        assertThat(productEntity.getReservedQuantity()).isEqualTo(product.getProductStock().getReservedQuantity());
 
-        assertThat(entity.getProductStatus()).isEqualTo(product.getProductStatus());
+        assertThat(productEntity.getProductStatus()).isEqualTo(product.getProductStatus());
 
-        assertThat(entity.getCreatedAt()).isEqualTo(product.getCreatedAt());
+        assertThat(productEntity.getCreatedAt()).isEqualTo(product.getCreatedAt());
 
-        assertThat(entity.getUpdatedAt()).isEqualTo(product.getUpdatedAt());
+        assertThat(productEntity.getUpdatedAt()).isEqualTo(product.getUpdatedAt());
     }
 
     @Test
@@ -56,9 +56,9 @@ class ProductPersistenceMapperImplTest {
         OffsetDateTime createdAt = OffsetDateTime.now().minusDays(1);
         OffsetDateTime updatedAt = OffsetDateTime.now();
 
-        ProductEntity entity = ProductEntity.builder().id(id).sku("SKU-001").name("Notebook").description("Notebook Gamer").price(BigDecimal.valueOf(5000)).availableQuantity(10).reservedQuantity(3).productStatus(ProductStatus.ACTIVE).createdAt(createdAt).updatedAt(updatedAt).build();
+        ProductEntity productEntity = ProductEntity.builder().id(id).sku("SKU-001").name("Notebook").description("Notebook Gamer").price(BigDecimal.valueOf(5000)).availableQuantity(10).reservedQuantity(3).productStatus(ProductStatus.ACTIVE).createdAt(createdAt).updatedAt(updatedAt).build();
 
-        Product product = mapper.toDomain(entity);
+        Product product = mapper.toDomain(productEntity);
 
         assertThat(product).isNotNull();
 
@@ -89,9 +89,9 @@ class ProductPersistenceMapperImplTest {
 
         Product original = Product.restore(UUID.randomUUID(), "SKU-999", "Mouse", "Mouse Gamer", BigDecimal.valueOf(299.90), 50, 5, ProductStatus.ACTIVE, OffsetDateTime.now().minusDays(2), OffsetDateTime.now());
 
-        ProductEntity entity = mapper.toEntity(original);
+        ProductEntity productEntity = mapper.toEntity(original);
 
-        Product restored = mapper.toDomain(entity);
+        Product restored = mapper.toDomain(productEntity);
 
         assertThat(restored.getId()).isEqualTo(original.getId());
 

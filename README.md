@@ -118,6 +118,27 @@ RESERVED
     +--> CONFIRMED
 ```
 
+### Event Flow
+
+```text
+Order Service
+      |
+      v
+OrderCreatedEvent
+      |
+      v
+Inventory Service
+      |
+      +--> Reserve Stock
+      |
+      +--> InventoryReservationSuccessEvent
+      |
+      +--> InventoryReservationFailedEvent
+      |
+      v
+Kafka
+```
+
 ---
 
 ## Gateway Service

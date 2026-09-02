@@ -1,17 +1,14 @@
 package com.lmf.order.orderservice.domain.model.payment;
 
 public enum PaymentMethod {
+
     CREDIT_CARD, DEBIT_CARD, PIX, BOLETO, PAYPAL, APPLE_PAY, GOOGLE_PAY;
 
     public static PaymentMethod fromName(String name) {
         try {
             return PaymentMethod.valueOf(name.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("No enum constant with name: " + name + ". Available values: " + java.util.Arrays.toString(values()));
+        } catch (IllegalArgumentException | NullPointerException e) {
+            throw new IllegalArgumentException("Invalid payment method: " + name);
         }
-    }
-
-    public static PaymentMethod[] getAllPaymentMethods() {
-        return values();
     }
 }

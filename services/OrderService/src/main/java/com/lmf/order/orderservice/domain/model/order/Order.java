@@ -81,6 +81,18 @@ public class Order {
         this.orderStatus = OrderStatus.PAYMENT_REJECTED;
     }
 
+    /**
+     * Cancela o pedido — usado quando a reserva de estoque falha antes mesmo do pagamento.
+     */
+    public void cancel() {
+
+        if (orderStatus != OrderStatus.PENDING_PAYMENT) {
+            throw new InvalidOrderStatusException(orderStatus.name());
+        }
+
+        this.orderStatus = OrderStatus.CANCELLED;
+    }
+
     public UUID getId() {
         return id;
     }

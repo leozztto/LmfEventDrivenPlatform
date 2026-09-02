@@ -91,19 +91,20 @@ This service is responsible for managing product inventory, stock reservations a
 
 ### Features
 
-- Product registration and management
-- Inventory reservation workflow
-- Manual stock movement operations
-- Available and reserved stock control
-- Kafka-based asynchronous communication
-- Transactional Outbox Pattern
-- Inbox Pattern for idempotent event consumption
-- Inventory reservation success/failure events
-- Retry and Dead Letter Topic (DLT) support
-- Global exception handling
-- PostgreSQL persistence with Flyway migrations
-- Observability with structured logging
-- Integration testing with Testcontainers
+- Cadastro e consulta de produtos (`POST /api/v1/products`, `GET /api/v1/products`,
+  `GET /api/v1/products/{id}`, `PATCH /api/v1/products/stock`)
+- Fluxo de reserva de estoque (um evento por pedido)
+- Movimentações manuais de estoque com histórico (`stock_movements`)
+- Ledger de reservas (`stock_reservations`) com compensação: `payment.failed` libera, `payment.approved` confirma
+- Controle de quantidade disponível e reservada
+- Comunicação assíncrona via Kafka (contratos compartilhados em `com.lmf:platform-contracts`)
+- Outbox/Inbox e DLT via biblioteca comum `com.lmf:platform-messaging`
+- Retry com backoff exponencial limitado + Dead Letter Topic
+- Tratamento global de exceções (404/409/422/400)
+- Persistência PostgreSQL com migrações Flyway
+- Observabilidade: logs estruturados + tracing (Micrometer/Brave) propagado pelo Kafka
+- OpenAPI/Swagger UI (springdoc) em `/swagger-ui.html`
+- Testes de integração com Testcontainers
 
 ### Inventory Lifecycle
 
@@ -124,19 +125,23 @@ RESERVED
 Order Service
       |
       v
-OrderCreatedEvent
+OrderCreatedEvent  (tópico order.created)
       |
       v
 Inventory Service
       |
-      +--> Reserve Stock
+      +--> reserva o estoque de todos os itens (tudo ou nada) e grava as reservas
       |
-      +--> InventoryReservationSuccessEvent
+      +--> InventoryReservedEvent          (tópico inventory.reserved, 1 por pedido)
+      |       payload: orderId, customerId, totalAmount, payment, items[]
       |
-      +--> InventoryReservationFailedEvent
+      +--> InventoryReservationFailedEvent  (tópico inventory.reservation.failed)
       |
       v
-Kafka
+Payment Service --> payment.approved | payment.failed
+      |
+      +--> payment.approved  --> Inventory confirma a reserva; Order -> PAYMENT_APPROVED
+      +--> payment.failed    --> Inventory libera a reserva;  Order -> PAYMENT_REJECTED
 ```
 
 ---
@@ -213,6 +218,8 @@ Padrões aplicados:
 
 ```text
 LmfEventDrivenPlatform/
+├── pom.xml                  # aggregator Maven (build multi-módulo)
+├── mvnw / mvnw.cmd
 ├── services/
 │   ├── AuditService/
 │   ├── AuthService/
@@ -224,10 +231,7 @@ LmfEventDrivenPlatform/
 │   └── PaymentService/
 │
 ├── shared/
-│   ├── events/
-│   ├── contracts/
-│   ├── schemas/
-│   └── libraries/
+│   └── contracts/           # com.lmf:platform-contracts — contratos de evento da saga
 │
 ├── infrastructure/
 │   ├── docker/
@@ -237,6 +241,17 @@ LmfEventDrivenPlatform/
 │
 ├── scripts/
 └── docs/
+```
+
+### Build
+
+```bash
+# Builda os contratos compartilhados e os serviços na ordem correta:
+./mvnw install
+
+# Para buildar um serviço isoladamente, os contratos precisam estar no repositório local antes:
+./mvnw -pl shared/contracts install
+cd services/OrderService && ./mvnw test
 ```
 
 # Author

@@ -5,29 +5,25 @@ import com.lmf.order.orderservice.application.usecase.command.CreateOrderCommand
 import com.lmf.order.orderservice.application.usecase.result.CreateOrderResult;
 import com.lmf.order.orderservice.domain.model.order.Order;
 import com.lmf.order.orderservice.domain.model.payment.PaymentMethod;
+import com.lmf.order.orderservice.domain.repository.IdempotencyStore;
 import com.lmf.order.orderservice.domain.repository.OrderRepository;
-import com.lmf.order.orderservice.domain.repository.OutboxEventRepository;
-import com.lmf.order.orderservice.infrastructure.persistence.entity.IdempotencyEntity;
-import com.lmf.order.orderservice.infrastructure.persistence.entity.OutboxEventEntity;
-import com.lmf.order.orderservice.infrastructure.persistence.repository.IdempotencyRepositoryAdapter;
+import com.lmf.platform.messaging.OutboxEvent;
+import com.lmf.platform.messaging.OutboxEventRepository;
 import com.lmf.order.orderservice.infrastructure.persistence.repository.SpringDataIdempotencyRepository;
 import com.lmf.order.orderservice.infrastructure.persistence.repository.SpringDataOrderRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
 @Transactional
-class CreateOrderUseCaseIT {
+class CreateOrderUseCaseIT extends AbstractIntegrationTest {
 
     @Autowired
     private CreateOrderUseCase createOrderUseCase;
@@ -39,7 +35,7 @@ class CreateOrderUseCaseIT {
     private OutboxEventRepository outboxEventRepository;
 
     @Autowired
-    private IdempotencyRepositoryAdapter idempotencyRepositoryAdapter;
+    private IdempotencyStore idempotencyRepositoryAdapter;
 
     @Autowired
     private SpringDataIdempotencyRepository springDataIdempotencyRepository;
@@ -79,13 +75,11 @@ class CreateOrderUseCaseIT {
 
         assertThat(order.getOrderItems()).hasSize(1);
 
-        List<OutboxEventEntity> outboxEventEntities = outboxEventRepository.findAll();
+        List<OutboxEvent> outboxEventEntities = outboxEventRepository.findAll();
 
         assertThat(outboxEventEntities).hasSizeGreaterThan(0);
 
-        Optional<IdempotencyEntity> idem = idempotencyRepositoryAdapter.findByKey(idempotencyKey);
-
-        assertThat(idem).isPresent();
+        assertThat(idempotencyRepositoryAdapter.findOrderIdByKey(idempotencyKey)).isPresent();
     }
 
     @Test
@@ -116,6 +110,6 @@ class CreateOrderUseCaseIT {
 
         assertThat(firstResult.totalAmount()).isEqualByComparingTo(secondResult.totalAmount());
 
-        assertThat(idempotencyRepositoryAdapter.findByKey(idempotencyKey)).isPresent();
+        assertThat(idempotencyRepositoryAdapter.findOrderIdByKey(idempotencyKey)).isPresent();
     }
 }

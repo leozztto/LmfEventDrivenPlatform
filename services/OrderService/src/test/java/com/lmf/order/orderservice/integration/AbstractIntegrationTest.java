@@ -5,29 +5,37 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
-@Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public abstract class AbstractIntegrationTest {
 
-    @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15");
+    protected static final PostgreSQLContainer<?> POSTGRES =
+            new PostgreSQLContainer<>("postgres:15").withDatabaseName("orderservice").withUsername("postgres").withPassword("root");
 
-    @Container
-    static KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.0"));
+    protected static final KafkaContainer KAFKA =
+            new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.0"));
+
+    // Containers singleton: iniciados uma vez por JVM e mantidos de pé (o Ryuk os remove ao fim).
+    // Reiniciá-los por classe invalida o cache de contexto do Spring (portas mudam) e faz o
+    // contexto reaproveitado apontar para um container já parado.
+    static {
+        POSTGRES.start();
+        KAFKA.start();
+    }
 
     @DynamicPropertySource
     static void configure(DynamicPropertyRegistry registry) {
 
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
+        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
 
-        registry.add("spring.datasource.username", postgres::getUsername);
+        registry.add("spring.datasource.username", POSTGRES::getUsername);
 
-        registry.add("spring.datasource.password", postgres::getPassword);
+        registry.add("spring.datasource.password", POSTGRES::getPassword);
 
-        registry.add("spring.kafka.bootstrap-servers", kafka::getBootstrapServers);
+        registry.add("spring.kafka.bootstrap-servers", KAFKA::getBootstrapServers);
+
+        // Poll do outbox praticamente desligado — os testes exercitam o relay manualmente.
+        registry.add("platform.outbox.poll-interval-ms", () -> 3_600_000);
     }
 }

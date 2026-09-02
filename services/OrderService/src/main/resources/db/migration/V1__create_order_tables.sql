@@ -31,26 +31,10 @@ CREATE TABLE order_items (
         ON DELETE CASCADE
 );
 
-CREATE TABLE outbox_events (
-    id UUID PRIMARY KEY,
-    aggregate_id UUID NOT NULL,
-    aggregate_type VARCHAR(100) NOT NULL,
-    event_type VARCHAR(100) NOT NULL,
-    payload TEXT NOT NULL,
-    outbox_status VARCHAR(50) NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    retry_count INTEGER NOT NULL DEFAULT 0,
-    error_message VARCHAR(300)
-);
+-- outbox_events é criada pelo módulo platform-messaging (db/migration/platform).
 
 CREATE INDEX idx_orders_customer_id
 ON orders(customer_id);
 
 CREATE INDEX idx_orders_status
 ON orders(order_status);
-
-CREATE INDEX idx_outbox_status
-ON outbox_events(outbox_status);
-
-CREATE INDEX idx_outbox_created_at
-ON outbox_events(created_at);

@@ -3,6 +3,7 @@ package com.lmf.order.orderservice.infrastructure.web.exception;
 import com.lmf.order.orderservice.domain.exception.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -27,14 +28,6 @@ public class GlobalExceptionHandler {
         log.warn("Validation error. path={}, fieldErrors={}", request.getRequestURI(), fieldErrors);
 
         return buildErrorResponse(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Validation failed", request.getRequestURI(), fieldErrors);
-    }
-
-    @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ErrorResponse> handleBusiness(BusinessException ex, HttpServletRequest request) {
-
-        log.warn("Business error. path={}, message={}", request.getRequestURI(), ex.getMessage());
-
-        return buildErrorResponse(HttpStatus.UNPROCESSABLE_ENTITY, "BUSINESS_ERROR", ex.getMessage(), request.getRequestURI(), null);
     }
 
     @ExceptionHandler(OrderNotFoundException.class)
@@ -91,6 +84,14 @@ public class GlobalExceptionHandler {
         log.error("Unexpected error. path={}", request.getRequestURI(), ex);
 
         return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", "Unexpected internal error", request.getRequestURI(), null);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex, HttpServletRequest request) {
+
+        log.warn("Data integrity violation (likely a concurrent request with the same idempotency key). path={}", request.getRequestURI());
+
+        return buildErrorResponse(HttpStatus.CONFLICT, "CONFLICT", "Conflicting concurrent request; retry the operation", request.getRequestURI(), null);
     }
 
     @ExceptionHandler(MissingRequestHeaderException.class)

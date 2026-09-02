@@ -6,7 +6,6 @@ import com.lmf.order.orderservice.infrastructure.persistence.mapper.OrderEntityM
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -29,10 +28,5 @@ public class OrderRepositoryAdapter implements OrderRepository {
     public Optional<Order> findById(UUID orderId) {
 
         return springDataOrderRepository.findById(orderId).map(orderEntityMapper::toDomain);
-    }
-
-    @Override
-    public List<Order> findAll() {
-        return springDataOrderRepository.findAll().stream().map(orderEntityMapper::toDomain).toList();
     }
 }

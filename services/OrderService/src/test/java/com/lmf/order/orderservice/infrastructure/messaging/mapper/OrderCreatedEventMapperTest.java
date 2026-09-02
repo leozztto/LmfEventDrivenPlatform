@@ -1,7 +1,7 @@
 package com.lmf.order.orderservice.infrastructure.messaging.mapper;
 
-import com.lmf.order.orderservice.domain.event.OrderCreatedEvent;
 import com.lmf.order.orderservice.domain.model.order.Order;
+import com.lmf.platform.contracts.OrderCreatedEvent;
 import com.lmf.order.orderservice.support.factory.TestDataFactory;
 import org.junit.jupiter.api.Test;
 
@@ -22,6 +22,6 @@ class OrderCreatedEventMapperTest {
 
         assertEquals(order.getId(), event.orderId());
 
-        assertEquals(order.getCustomerInfo().getEmail(), event.customer().getEmail());
+        assertEquals(order.getCustomerInfo().getEmail(), event.customer().email());
     }
 }

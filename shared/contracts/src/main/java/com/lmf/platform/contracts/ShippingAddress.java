@@ -1,4 +1,4 @@
-package com.lmf.payment.paymentservice.events;
+package com.lmf.platform.contracts;
 
 public record ShippingAddress(
 
@@ -8,7 +8,7 @@ public record ShippingAddress(
 
         String city,
 
-        String state,
+        String zipCode,
 
-        String zipCode) {
+        String country) {
 }

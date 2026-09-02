@@ -12,8 +12,15 @@
 	<description>Aggregator para build multi-módulo (contratos compartilhados + serviços).</description>
 
 	<modules>
+		<!-- bibliotecas compartilhadas -->
 		<module>shared/contracts</module>
 		<module>shared/libraries/platform-messaging</module>
+		<!-- serviços -->
+		<module>services/AuthService</module>
+		<module>services/AuditService</module>
+		<module>services/FraudService</module>
+		<module>services/GatewayService</module>
+		<module>services/NotificationService</module>
 		<module>services/OrderService</module>
 		<module>services/PaymentService</module>
 		<module>services/InventoryService</module>

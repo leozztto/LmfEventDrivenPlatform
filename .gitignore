@@ -20,3 +20,6 @@ Thumbs.db
 # Build
 build/
 .gradle/
+
+# Notas locais (nao versionadas)
+.local/

@@ -6,7 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Estrutura do repositório
 
-Monorepo de microsserviços Spring Boot independentes em `services/`. **Não há `pom.xml` pai/agregador** — cada serviço é um projeto Maven autocontido, com seu próprio `pom.xml` e Maven Wrapper (`mvnw`/`mvnw.cmd`). As versões do Spring Boot e as configurações não são compartilhadas e divergem entre serviços (ex.: OrderService fixa `3.5.0`, InventoryService/PaymentService `3.5.14`). Todos os serviços têm como alvo o Java 17.
+Monorepo de microsserviços Spring Boot em `services/` mais bibliotecas compartilhadas em `shared/`. Existe um **`pom.xml` agregador na raiz** (`com.lmf:lmf-event-driven-platform`, packaging `pom`) que lista os dez módulos; ele serve para build local completo e para o CI construir um módulo por vez pelo reator (`./mvnw -pl <módulo> -am`). O agregador **não** é o `<parent>` dos módulos: cada serviço continua sendo um projeto Maven autocontido, com seu próprio Maven Wrapper (`mvnw`/`mvnw.cmd`) e herdando de `spring-boot-starter-parent`. Hoje todos os serviços fixam Spring Boot `3.5.14` e têm como alvo o Java 17, mas cada `pom.xml` declara isso por conta própria — não há herança de configuração via o agregador.
+
+Bibliotecas compartilhadas (`groupId` `com.lmf`, versão `0.0.1-SNAPSHOT`):
+
+- **`shared/contracts`** (`platform-contracts`) — contratos de evento (envelope + payloads da saga) compartilhados entre serviços.
+- **`shared/libraries/platform-messaging`** (`platform-messaging`) — Outbox/Inbox/DLT comuns (relay agendado, consumidor idempotente). Depende de `platform-contracts`.
+
+Só **OrderService**, **PaymentService** e **InventoryService** consomem essas libs hoje.
 
 Serviços implementados: **OrderService**, **InventoryService**, **PaymentService**. `AuditService`, `AuthService`, `FraudService`, `GatewayService` e `NotificationService` são esqueletos gerados (apenas a classe `*Application` + um teste de carga de contexto) — trate-os como ainda não construídos.
 
@@ -25,6 +32,12 @@ Execute tudo de dentro do diretório do serviço, ex.: `cd services/OrderService
 | Subir o serviço | `./mvnw spring-boot:run` |
 
 No Windows use `mvnw.cmd`. Os testes de integração (`*IT.java` / `*IntegrationTest.java`, que estendem `AbstractIntegrationTest`) sobem **Testcontainers** (Postgres + Kafka) e exigem um daemon Docker em execução. Os testes unitários são `*Test.java` e não dependem de nada externo.
+
+Para construir um módulo isolado a partir da raiz (compila antes só as libs de que ele precisa): `./mvnw -pl services/OrderService -am verify`.
+
+### CI (GitHub Actions)
+
+CI **por módulo**: há um workflow fino por módulo em `.github/workflows/` (`order-service.yml`, `auth-service.yml`, `platform-contracts.yml`, …), disparado só pelos paths daquele módulo (os serviços de saga incluem também `shared/**`). Todos chamam o workflow reutilizável `_build-module.yml`, que roda `./mvnw -B -ntp -pl <módulo> -am verify` num runner `ubuntu-latest` (Docker disponível para os testes de integração). Ao adicionar um módulo novo, criar o `<nome>.yml` correspondente e adicioná-lo ao `<modules>` do `pom.xml` raiz.
 
 ### Infraestrutura local
 

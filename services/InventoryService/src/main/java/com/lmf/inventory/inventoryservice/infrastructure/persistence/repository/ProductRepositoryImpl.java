@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -33,6 +34,12 @@ public class ProductRepositoryImpl implements ProductRepository {
     public Optional<Product> findById(UUID id) {
 
         return springDataProductRepository.findById(id).map(productPersistenceMapper::toDomain);
+    }
+
+    @Override
+    public List<Product> findAll() {
+
+        return springDataProductRepository.findAll().stream().map(productPersistenceMapper::toDomain).toList();
     }
 
     @Override

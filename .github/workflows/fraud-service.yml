@@ -1,0 +1,39 @@
+name: fraud-service
+
+# CI isolado do módulo `services/FraudService`. Dispara só quando este módulo
+# (ou algo de que ele depende) muda. Build via .github/workflows/_build-module.yml.
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'services/FraudService/**'
+      - 'pom.xml'
+      - '.mvn/**'
+      - 'mvnw'
+      - 'mvnw.cmd'
+      - '.github/workflows/fraud-service.yml'
+      - '.github/workflows/_build-module.yml'
+  pull_request:
+    paths:
+      - 'services/FraudService/**'
+      - 'pom.xml'
+      - '.mvn/**'
+      - 'mvnw'
+      - 'mvnw.cmd'
+      - '.github/workflows/fraud-service.yml'
+      - '.github/workflows/_build-module.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fraud-service-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    uses: ./.github/workflows/_build-module.yml
+    with:
+      module: services/FraudService

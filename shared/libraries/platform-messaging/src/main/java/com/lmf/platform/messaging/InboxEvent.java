@@ -1,6 +1,5 @@
-package com.lmf.payment.paymentservice.infrastructure.persistence.entity;
+package com.lmf.platform.messaging;
 
-import com.lmf.payment.paymentservice.infrastructure.inbox.InboxStatus;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -9,11 +8,15 @@ import lombok.NoArgsConstructor;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+/**
+ * Registro do Inbox Pattern. Um evento só é considerado duplicado quando já está {@code PROCESSED} —
+ * uma tentativa anterior que falhou (e teve rollback) não bloqueia o reprocessamento.
+ */
 @Getter
 @Entity
 @Table(name = "inbox_events")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class InboxEventEntity {
+public class InboxEvent {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -29,8 +32,8 @@ public class InboxEventEntity {
     private String eventType;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private InboxStatus inboxStatus;
+    @Column(name = "inbox_status", nullable = false)
+    private InboxStatus status;
 
     @Column(name = "received_at", nullable = false)
     private OffsetDateTime receivedAt;
@@ -41,22 +44,21 @@ public class InboxEventEntity {
     @Column(name = "failure_reason")
     private String failureReason;
 
-    public InboxEventEntity(String eventId, UUID aggregateId, String eventType) {
+    public InboxEvent(String eventId, UUID aggregateId, String eventType) {
         this.eventId = eventId;
         this.aggregateId = aggregateId;
         this.eventType = eventType;
-        this.inboxStatus = InboxStatus.RECEIVED;
+        this.status = InboxStatus.RECEIVED;
         this.receivedAt = OffsetDateTime.now();
     }
 
-    public void markProcessed() {
-        this.inboxStatus = InboxStatus.PROCESSED;
+    void markProcessed() {
+        this.status = InboxStatus.PROCESSED;
         this.processedAt = OffsetDateTime.now();
     }
 
-    public void markFailed(String reason) {
-        this.inboxStatus = InboxStatus.FAILED;
+    void markFailed(String reason) {
+        this.status = InboxStatus.FAILED;
         this.failureReason = reason;
     }
 }
-

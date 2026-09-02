@@ -1,0 +1,5 @@
+# Perfil de teste de integração. Poll do outbox praticamente desligado — os testes exercitam o relay
+# manualmente.
+platform:
+  outbox:
+    poll-interval-ms: 3600000

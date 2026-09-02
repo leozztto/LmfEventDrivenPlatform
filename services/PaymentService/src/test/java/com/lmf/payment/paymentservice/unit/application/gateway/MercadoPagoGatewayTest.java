@@ -2,7 +2,7 @@ package com.lmf.payment.paymentservice.unit.application.gateway;
 
 import com.lmf.payment.paymentservice.application.gateway.dto.PaymentGatewayRequest;
 import com.lmf.payment.paymentservice.application.gateway.dto.PaymentGatewayResponse;
-import com.lmf.payment.paymentservice.application.gateway.impl.MercadoPagoGateway;
+import com.lmf.payment.paymentservice.infrastructure.gateway.MercadoPagoGateway;
 import com.lmf.payment.paymentservice.domain.exception.PaymentGatewayException;
 import com.lmf.payment.paymentservice.domain.exception.PaymentTimeoutException;
 import com.lmf.payment.paymentservice.domain.model.PaymentMethod;
@@ -99,11 +99,11 @@ class MercadoPagoGatewayTest {
 
         PaymentMethod paymentMethod = mercadoPagoGateway.supports();
 
-        assertEquals(PaymentMethod.MERCAD_PAGO, paymentMethod);
+        assertEquals(PaymentMethod.CREDIT_CARD, paymentMethod);
     }
 
     private PaymentGatewayRequest buildRequest() {
 
-        return new PaymentGatewayRequest(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BigDecimal.valueOf(500), "BRL", PaymentMethod.MERCAD_PAGO, 1);
+        return new PaymentGatewayRequest(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BigDecimal.valueOf(500), "BRL", PaymentMethod.CREDIT_CARD, 1);
     }
 }

@@ -2,7 +2,7 @@ package com.lmf.payment.paymentservice.unit.application.gateway;
 
 import com.lmf.payment.paymentservice.application.gateway.dto.PaymentGatewayRequest;
 import com.lmf.payment.paymentservice.application.gateway.dto.PaymentGatewayResponse;
-import com.lmf.payment.paymentservice.application.gateway.impl.FakePaymentGateway;
+import com.lmf.payment.paymentservice.infrastructure.gateway.FakePaymentGateway;
 import com.lmf.payment.paymentservice.domain.model.PaymentMethod;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

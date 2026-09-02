@@ -3,9 +3,8 @@ package com.lmf.payment.paymentservice.unit.application.service;
 import com.lmf.payment.paymentservice.application.gateway.PaymentGateway;
 import com.lmf.payment.paymentservice.application.gateway.dto.PaymentGatewayRequest;
 import com.lmf.payment.paymentservice.application.gateway.dto.PaymentGatewayResponse;
-import com.lmf.payment.paymentservice.application.gateway.impl.PaymentGatewayResolver;
+import com.lmf.payment.paymentservice.application.gateway.PaymentGatewayProvider;
 import com.lmf.payment.paymentservice.application.service.PaymentProcessorService;
-import com.lmf.payment.paymentservice.domain.exception.PaymentDeclinedException;
 import com.lmf.payment.paymentservice.domain.model.Payment;
 import com.lmf.payment.paymentservice.domain.model.PaymentMethod;
 import com.lmf.payment.paymentservice.infrastructure.observability.PaymentMetricsService;
@@ -22,7 +21,7 @@ import static org.mockito.Mockito.*;
 
 class PaymentProcessorServiceTest {
 
-    private PaymentGatewayResolver gatewayResolver;
+    private PaymentGatewayProvider gatewayProvider;
 
     private PaymentMetricsService metricsService;
 
@@ -33,13 +32,13 @@ class PaymentProcessorServiceTest {
     @BeforeEach
     void setUp() {
 
-        gatewayResolver = mock(PaymentGatewayResolver.class);
+        gatewayProvider = mock(PaymentGatewayProvider.class);
 
         metricsService = mock(PaymentMetricsService.class);
 
         paymentGateway = mock(PaymentGateway.class);
 
-        paymentProcessorService = new PaymentProcessorService(gatewayResolver, metricsService);
+        paymentProcessorService = new PaymentProcessorService(gatewayProvider, metricsService);
     }
 
     @Test
@@ -59,7 +58,7 @@ class PaymentProcessorServiceTest {
         when(payment.getInstallments()).thenReturn(1);
         when(payment.getProvider()).thenReturn("MERCADO_PAGO");
 
-        when(gatewayResolver.resolve(PaymentMethod.CREDIT_CARD)).thenReturn(paymentGateway);
+        when(gatewayProvider.resolve(PaymentMethod.CREDIT_CARD)).thenReturn(paymentGateway);
 
         PaymentGatewayResponse paymentGatewayResponse = new PaymentGatewayResponse(true, "tx-123", "APPROVED", null);
 
@@ -75,7 +74,7 @@ class PaymentProcessorServiceTest {
     }
 
     @Test
-    @DisplayName("Deve reprovar pagamento quando gateway retornar falha")
+    @DisplayName("Deve reprovar pagamento (sem lançar exceção) quando gateway retornar falha")
     void shouldFailPaymentWhenGatewayReturnsFailure() {
 
         Payment payment = mock(Payment.class);
@@ -89,20 +88,18 @@ class PaymentProcessorServiceTest {
         when(payment.getInstallments()).thenReturn(1);
         when(payment.getProvider()).thenReturn("MERCADO_PAGO");
 
-        when(gatewayResolver.resolve(PaymentMethod.PIX)).thenReturn(paymentGateway);
+        when(gatewayProvider.resolve(PaymentMethod.PIX)).thenReturn(paymentGateway);
 
         PaymentGatewayResponse paymentGatewayResponse = new PaymentGatewayResponse(false, null, "FAILED", "Card denied");
 
         when(paymentGateway.process(any(PaymentGatewayRequest.class))).thenReturn(paymentGatewayResponse);
 
-        PaymentDeclinedException exception = assertThrows(PaymentDeclinedException.class, () -> paymentProcessorService.process(payment));
-
-        assertEquals("Card denied", exception.getMessage());
+        assertDoesNotThrow(() -> paymentProcessorService.process(payment));
 
         verify(payment).fail("Card denied", "FAILED");
+        verify(payment, never()).approve(any(), any());
 
         verify(metricsService).incrementFailedPayments();
-
         verify(metricsService, never()).incrementApprovedPayments();
     }
 
@@ -117,17 +114,17 @@ class PaymentProcessorServiceTest {
         when(payment.getCustomerId()).thenReturn(UUID.randomUUID());
         when(payment.getAmount()).thenReturn(BigDecimal.valueOf(300));
         when(payment.getCurrency()).thenReturn("USD");
-        when(payment.getPaymentMethod()).thenReturn(PaymentMethod.MERCAD_PAGO);
+        when(payment.getPaymentMethod()).thenReturn(PaymentMethod.DEBIT_CARD);
         when(payment.getInstallments()).thenReturn(2);
         when(payment.getProvider()).thenReturn("MERCADO_PAGO");
 
-        when(gatewayResolver.resolve(PaymentMethod.MERCAD_PAGO)).thenReturn(paymentGateway);
+        when(gatewayProvider.resolve(PaymentMethod.DEBIT_CARD)).thenReturn(paymentGateway);
 
         when(paymentGateway.process(any(PaymentGatewayRequest.class))).thenReturn(new PaymentGatewayResponse(true, "tx-999", "APPROVED", null));
 
         paymentProcessorService.process(payment);
 
-        verify(gatewayResolver).resolve(PaymentMethod.MERCAD_PAGO);
+        verify(gatewayProvider).resolve(PaymentMethod.DEBIT_CARD);
     }
 
     @Test
@@ -149,7 +146,7 @@ class PaymentProcessorServiceTest {
         when(payment.getInstallments()).thenReturn(5);
         when(payment.getProvider()).thenReturn("MERCADO_PAGO");
 
-        when(gatewayResolver.resolve(PaymentMethod.CREDIT_CARD)).thenReturn(paymentGateway);
+        when(gatewayProvider.resolve(PaymentMethod.CREDIT_CARD)).thenReturn(paymentGateway);
 
         when(paymentGateway.process(any(PaymentGatewayRequest.class))).thenReturn(new PaymentGatewayResponse(true, "tx-abc", "APPROVED", null));
 

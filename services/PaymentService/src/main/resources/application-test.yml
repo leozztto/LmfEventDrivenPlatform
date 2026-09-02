@@ -1,7 +1,0 @@
-spring:
-  scheduling:
-    enabled: false
-
-testcontainers:
-  reuse:
-    enable=true:

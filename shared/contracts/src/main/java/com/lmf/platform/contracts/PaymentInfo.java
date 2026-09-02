@@ -1,6 +1,4 @@
-package com.lmf.payment.paymentservice.events;
-
-import com.lmf.payment.paymentservice.domain.model.PaymentMethod;
+package com.lmf.platform.contracts;
 
 import java.math.BigDecimal;
 

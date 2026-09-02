@@ -1,4 +1,4 @@
-package com.lmf.inventory.inventoryservice.domain.event;
+package com.lmf.platform.contracts;
 
 import java.util.UUID;
 

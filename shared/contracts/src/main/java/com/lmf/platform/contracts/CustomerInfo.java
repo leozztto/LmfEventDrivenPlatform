@@ -1,4 +1,4 @@
-package com.lmf.payment.paymentservice.events;
+package com.lmf.platform.contracts;
 
 import java.util.UUID;
 

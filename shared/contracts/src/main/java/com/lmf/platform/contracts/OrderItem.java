@@ -1,4 +1,4 @@
-package com.lmf.payment.paymentservice.events;
+package com.lmf.platform.contracts;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -9,5 +9,7 @@ public record OrderItem(
 
         Integer quantity,
 
-        BigDecimal price) {
+        BigDecimal unitPrice,
+
+        BigDecimal subtotal) {
 }

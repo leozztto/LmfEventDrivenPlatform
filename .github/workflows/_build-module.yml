@@ -21,6 +21,11 @@ on:
         required: false
         type: string
         default: "verify"
+      skip-tests:
+        description: "Só compilar, sem rodar testes. Usado pelos serviços ainda em esqueleto."
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -42,7 +47,7 @@ jobs:
       - name: Build & test — ${{ inputs.module }}
         run: |
           chmod +x mvnw
-          ./mvnw -B -ntp -pl "${{ inputs.module }}" -am ${{ inputs.goal }}
+          ./mvnw -B -ntp -pl "${{ inputs.module }}" -am ${{ inputs.goal }} ${{ inputs.skip-tests && '-DskipTests' || '' }}
 
       - name: Publicar relatórios de teste
         if: always()

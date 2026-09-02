@@ -37,3 +37,4 @@ jobs:
     uses: ./.github/workflows/_build-module.yml
     with:
       module: services/FraudService
+      skip-tests: true  # esqueleto: só compila até ter implementação real

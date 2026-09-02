@@ -1,20 +1,24 @@
 package com.lmf.inventory.inventoryservice.interfaces.rest.request;
 
 import com.lmf.inventory.inventoryservice.application.command.ProductCommand;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 
 import java.math.BigDecimal;
 
 public record ProductRequest(
 
-        String sku,
+        @NotBlank String sku,
 
-        String name,
+        @NotBlank String name,
 
-        String description,
+        @NotBlank String description,
 
-        BigDecimal price,
+        @NotNull @Positive BigDecimal price,
 
-        Integer initialStock) {
+        @NotNull @PositiveOrZero Integer initialStock) {
 
     public ProductCommand toProductCommand() {
 

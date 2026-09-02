@@ -6,7 +6,9 @@ import com.lmf.inventory.inventoryservice.domain.model.Product;
 import com.lmf.inventory.inventoryservice.domain.model.ProductStatus;
 import com.lmf.inventory.inventoryservice.domain.model.StockMovementReason;
 import com.lmf.inventory.inventoryservice.domain.model.StockMovementType;
+import com.lmf.inventory.inventoryservice.domain.model.StockMovement;
 import com.lmf.inventory.inventoryservice.domain.repository.ProductRepository;
+import com.lmf.inventory.inventoryservice.domain.repository.StockMovementRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,6 +27,8 @@ class StockMovementServiceTest {
 
     private ProductRepository productRepository;
 
+    private StockMovementRepository stockMovementRepository;
+
     private StockMovementService stockMovementService;
 
     @BeforeEach
@@ -32,7 +36,9 @@ class StockMovementServiceTest {
 
         productRepository = mock(ProductRepository.class);
 
-        stockMovementService = new StockMovementService(productRepository);
+        stockMovementRepository = mock(StockMovementRepository.class);
+
+        stockMovementService = new StockMovementService(productRepository, stockMovementRepository);
     }
 
     @Test
@@ -60,6 +66,7 @@ class StockMovementServiceTest {
         verify(productRepository).findById(productId);
 
         verify(productRepository).update(argThat(updatedProduct -> updatedProduct.getProductStock().getAvailableQuantity() == 15));
+        verify(stockMovementRepository).save(any(StockMovement.class));
     }
 
     @Test

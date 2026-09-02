@@ -1,6 +1,6 @@
 package com.lmf.inventory.inventoryservice.application.usecase;
 
-import com.lmf.inventory.inventoryservice.domain.event.OrderCreatedEvent;
+import com.lmf.platform.contracts.OrderCreatedEvent;
 
 public interface ReserveInventoryUseCase {
 

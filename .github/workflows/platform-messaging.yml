@@ -1,0 +1,41 @@
+name: platform-messaging
+
+# CI isolado do módulo `shared/libraries/platform-messaging`. Dispara só quando este módulo
+# (ou algo de que ele depende) muda. Build via .github/workflows/_build-module.yml.
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'shared/libraries/platform-messaging/**'
+      - 'shared/contracts/**'
+      - 'pom.xml'
+      - '.mvn/**'
+      - 'mvnw'
+      - 'mvnw.cmd'
+      - '.github/workflows/platform-messaging.yml'
+      - '.github/workflows/_build-module.yml'
+  pull_request:
+    paths:
+      - 'shared/libraries/platform-messaging/**'
+      - 'shared/contracts/**'
+      - 'pom.xml'
+      - '.mvn/**'
+      - 'mvnw'
+      - 'mvnw.cmd'
+      - '.github/workflows/platform-messaging.yml'
+      - '.github/workflows/_build-module.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platform-messaging-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    uses: ./.github/workflows/_build-module.yml
+    with:
+      module: shared/libraries/platform-messaging

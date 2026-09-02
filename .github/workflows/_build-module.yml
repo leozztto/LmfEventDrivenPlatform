@@ -40,7 +40,9 @@ jobs:
           cache: maven
 
       - name: Build & test — ${{ inputs.module }}
-        run: ./mvnw -B -ntp -pl "${{ inputs.module }}" -am ${{ inputs.goal }}
+        run: |
+          chmod +x mvnw
+          ./mvnw -B -ntp -pl "${{ inputs.module }}" -am ${{ inputs.goal }}
 
       - name: Publicar relatórios de teste
         if: always()

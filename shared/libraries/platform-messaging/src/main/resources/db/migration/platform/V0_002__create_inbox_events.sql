@@ -1,20 +1,14 @@
-CREATE TABLE inbox_events (
-
+CREATE TABLE IF NOT EXISTS inbox_events
+(
     id UUID PRIMARY KEY,
-
     event_id VARCHAR(255) NOT NULL,
-
     aggregate_id UUID NOT NULL,
-
     event_type VARCHAR(255) NOT NULL,
-
-    inbox_status VARCHAR(50) NOT NULL,
-
+    inbox_status VARCHAR(20) NOT NULL,
     received_at TIMESTAMP WITH TIME ZONE NOT NULL,
-
     processed_at TIMESTAMP WITH TIME ZONE,
-
     failure_reason TEXT,
-
     CONSTRAINT uk_inbox_event_id UNIQUE (event_id)
 );
+
+CREATE INDEX IF NOT EXISTS idx_inbox_status ON inbox_events(inbox_status);

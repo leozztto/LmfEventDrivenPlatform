@@ -1,7 +1,7 @@
 package com.lmf.payment.paymentservice.unit.application.gateway;
 
 import com.lmf.payment.paymentservice.application.gateway.PaymentGateway;
-import com.lmf.payment.paymentservice.application.gateway.impl.PaymentGatewayResolver;
+import com.lmf.payment.paymentservice.infrastructure.gateway.PaymentGatewayResolver;
 import com.lmf.payment.paymentservice.domain.exception.UnsupportedPaymentMethodException;
 import com.lmf.payment.paymentservice.domain.model.PaymentMethod;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,7 +29,7 @@ class PaymentGatewayResolverTest {
 
         when(creditCardGateway.supports()).thenReturn(PaymentMethod.CREDIT_CARD);
 
-        when(mercadoPagoGateway.supports()).thenReturn(PaymentMethod.MERCAD_PAGO);
+        when(mercadoPagoGateway.supports()).thenReturn(PaymentMethod.DEBIT_CARD);
 
         paymentGatewayResolver = new PaymentGatewayResolver(List.of(creditCardGateway, mercadoPagoGateway));
     }
@@ -48,7 +48,7 @@ class PaymentGatewayResolverTest {
     @DisplayName("Deve resolver gateway Mercado Pago")
     void shouldResolveMercadoPagoGateway() {
 
-        PaymentGateway resolvedGateway = paymentGatewayResolver.resolve(PaymentMethod.MERCAD_PAGO);
+        PaymentGateway resolvedGateway = paymentGatewayResolver.resolve(PaymentMethod.DEBIT_CARD);
 
         assertNotNull(resolvedGateway);
         assertEquals(mercadoPagoGateway, resolvedGateway);
@@ -69,7 +69,7 @@ class PaymentGatewayResolverTest {
 
         PaymentGateway creditGatewayResolved = paymentGatewayResolver.resolve(PaymentMethod.CREDIT_CARD);
 
-        PaymentGateway mercadoPagoResolved = paymentGatewayResolver.resolve(PaymentMethod.MERCAD_PAGO);
+        PaymentGateway mercadoPagoResolved = paymentGatewayResolver.resolve(PaymentMethod.DEBIT_CARD);
 
         assertEquals(creditCardGateway, creditGatewayResolved);
         assertEquals(mercadoPagoGateway, mercadoPagoResolved);

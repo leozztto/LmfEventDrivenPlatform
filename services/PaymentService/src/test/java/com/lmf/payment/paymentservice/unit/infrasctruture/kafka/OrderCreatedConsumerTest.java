@@ -1,13 +1,13 @@
 package com.lmf.payment.paymentservice.unit.infrasctruture.kafka;
 
 import com.lmf.payment.paymentservice.application.command.ProcessPaymentCommand;
-import com.lmf.payment.paymentservice.application.service.InboxEventService;
+import com.lmf.platform.messaging.InboxService;
 import com.lmf.payment.paymentservice.application.usecase.ProcessPaymentUseCase;
 import com.lmf.payment.paymentservice.domain.model.PaymentMethod;
-import com.lmf.payment.paymentservice.events.InventoryReservedEvent;
-import com.lmf.payment.paymentservice.events.PaymentInfo;
-import com.lmf.payment.paymentservice.events.ReservedItem;
 import com.lmf.payment.paymentservice.infrastructure.kafka.consumer.InventoryReservedConsumer;
+import com.lmf.platform.contracts.InventoryReservedEvent;
+import com.lmf.platform.contracts.PaymentInfo;
+import com.lmf.platform.contracts.ReservedItem;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,7 +26,7 @@ class InventoryReservedConsumerTest {
 
     private ProcessPaymentUseCase processPaymentUseCase;
 
-    private InboxEventService inboxEventService;
+    private InboxService inboxEventService;
 
     private InventoryReservedConsumer inventoryReservedConsumer;
 
@@ -35,67 +35,56 @@ class InventoryReservedConsumerTest {
 
         processPaymentUseCase = mock(ProcessPaymentUseCase.class);
 
-        inboxEventService = mock(InboxEventService.class);
+        inboxEventService = mock(InboxService.class);
 
         inventoryReservedConsumer = new InventoryReservedConsumer(inboxEventService, processPaymentUseCase);
     }
 
     @Test
-    @DisplayName("Deve processar evento com sucesso")
+    @DisplayName("Deve registrar, processar e marcar como processado no caminho feliz")
     void shouldProcessEventSuccessfully() {
 
         InventoryReservedEvent event = buildEvent();
 
-        when(inboxEventService.isDuplicate(event.eventId().toString())).thenReturn(false);
+        when(inboxEventService.isAlreadyProcessed(event.eventId().toString())).thenReturn(false);
 
         inventoryReservedConsumer.consume(event);
 
         verify(inboxEventService).register(event.eventId().toString(), event.orderId(), event.eventType());
-
         verify(processPaymentUseCase).execute(any(ProcessPaymentCommand.class));
-
         verify(inboxEventService).markProcessed(event.eventId().toString());
-
-        verify(inboxEventService, never()).markFailed(any(), any());
     }
 
     @Test
-    @DisplayName("Deve ignorar evento duplicado")
-    void shouldIgnoreDuplicatedEvent() {
+    @DisplayName("Deve ignorar evento já processado")
+    void shouldIgnoreAlreadyProcessedEvent() {
 
         InventoryReservedEvent event = buildEvent();
 
-        when(inboxEventService.isDuplicate(event.eventId().toString())).thenReturn(true);
+        when(inboxEventService.isAlreadyProcessed(event.eventId().toString())).thenReturn(true);
 
         inventoryReservedConsumer.consume(event);
 
-        verify(inboxEventService).isDuplicate(event.eventId().toString());
-
+        verify(inboxEventService).isAlreadyProcessed(event.eventId().toString());
         verify(inboxEventService, never()).register(any(), any(), any());
-
         verifyNoInteractions(processPaymentUseCase);
-
         verify(inboxEventService, never()).markProcessed(any());
-
-        verify(inboxEventService, never()).markFailed(any(), any());
     }
 
     @Test
-    @DisplayName("Deve marcar evento como falho quando ocorrer erro")
-    void shouldMarkEventAsFailedWhenErrorOccurs() {
+    @DisplayName("Deve propagar a exceção e não marcar como processado quando o caso de uso falha")
+    void shouldPropagateExceptionWhenUseCaseFails() {
 
         InventoryReservedEvent event = buildEvent();
 
-        when(inboxEventService.isDuplicate(event.eventId().toString())).thenReturn(false);
+        when(inboxEventService.isAlreadyProcessed(event.eventId().toString())).thenReturn(false);
 
         doThrow(new RuntimeException("Gateway timeout")).when(processPaymentUseCase).execute(any(ProcessPaymentCommand.class));
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> inventoryReservedConsumer.consume(event));
 
         assertEquals("Gateway timeout", exception.getMessage());
-
-        verify(inboxEventService).markFailed(event.eventId().toString(), "Gateway timeout");
-
+        verify(inboxEventService).register(event.eventId().toString(), event.orderId(), event.eventType());
         verify(inboxEventService, never()).markProcessed(any());
     }
 
@@ -105,7 +94,7 @@ class InventoryReservedConsumerTest {
 
         InventoryReservedEvent event = buildEvent();
 
-        when(inboxEventService.isDuplicate(event.eventId().toString())).thenReturn(false);
+        when(inboxEventService.isAlreadyProcessed(event.eventId().toString())).thenReturn(false);
 
         ArgumentCaptor<ProcessPaymentCommand> captor = ArgumentCaptor.forClass(ProcessPaymentCommand.class);
 
@@ -116,30 +105,26 @@ class InventoryReservedConsumerTest {
         ProcessPaymentCommand command = captor.getValue();
 
         assertEquals(event.orderId(), command.orderId());
-
         assertEquals(event.eventId(), command.eventId());
-
         assertEquals(event.eventType(), command.eventType());
-
         assertEquals(event.customerId(), command.customerId());
-
         assertEquals(event.totalAmount(), command.amount());
-
         assertEquals("BRL", command.currency());
-
-        assertEquals(event.payment().paymentMethod(), command.paymentMethod());
-
+        assertEquals(event.payment().paymentMethod().name(), command.paymentMethod().name());
         assertEquals(event.payment().installments(), command.installments());
     }
 
     private InventoryReservedEvent buildEvent() {
 
-        UUID eventId = UUID.randomUUID();
-
-        UUID orderId = UUID.randomUUID();
-
-        UUID customerId = UUID.randomUUID();
-
-        return new InventoryReservedEvent(eventId, "INVENTORY_RESERVED", "1.0", OffsetDateTime.now(ZoneOffset.UTC), orderId, customerId, new BigDecimal("299.90"), new PaymentInfo(PaymentMethod.CREDIT_CARD, 3, new BigDecimal("299.90")), List.of(new ReservedItem(UUID.randomUUID(), 1), new ReservedItem(UUID.randomUUID(), 2)));
+        return new InventoryReservedEvent(
+                UUID.randomUUID(),
+                InventoryReservedEvent.TYPE,
+                "v1",
+                OffsetDateTime.now(ZoneOffset.UTC),
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                new BigDecimal("299.90"),
+                new PaymentInfo(com.lmf.platform.contracts.PaymentMethod.CREDIT_CARD, 3, new BigDecimal("299.90")),
+                List.of(new ReservedItem(UUID.randomUUID(), 1), new ReservedItem(UUID.randomUUID(), 2)));
     }
 }

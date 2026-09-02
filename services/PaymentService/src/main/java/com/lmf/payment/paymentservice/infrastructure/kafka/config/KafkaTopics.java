@@ -7,7 +7,12 @@ public final class KafkaTopics {
 
     public static final String INVENTORY_RESERVED = "inventory.reserved";
 
-    public static final String PAYMENT_PROCESSED = "payment.processed";
+    public static final String PAYMENT_PROCESSING = "payment.processing";
 
-    public static final String PAYMENT_FAILED_DLT = "payment.failed.dlt";
+    public static final String PAYMENT_APPROVED = "payment.approved";
+
+    public static final String PAYMENT_FAILED = "payment.failed";
+
+    /** DLT do relay do outbox (não do consumo — esse usa {@code <topic>.dlt}). */
+    public static final String PAYMENT_OUTBOX_DLT = "payment.outbox.dlt";
 }

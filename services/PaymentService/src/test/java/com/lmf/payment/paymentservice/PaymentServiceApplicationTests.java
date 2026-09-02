@@ -1,13 +1,11 @@
 package com.lmf.payment.paymentservice;
 
+import com.lmf.payment.paymentservice.integration.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class PaymentServiceApplicationTests {
+class PaymentServiceApplicationTests extends AbstractIntegrationTest {
 
     @Test
     void contextLoads() {
     }
-
 }

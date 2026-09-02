@@ -55,6 +55,9 @@ public class KafkaErrorConfig {
 
         backOff.setMaxInterval(30000L);
 
+        // Limite total de retentativa: esgotado, a mensagem vai para a DLT (nunca retry infinito).
+        backOff.setMaxElapsedTime(120000L);
+
         DefaultErrorHandler errorHandler = new DefaultErrorHandler(recoverer, backOff);
 
         return errorHandler;

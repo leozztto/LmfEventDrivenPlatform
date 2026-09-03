@@ -2,3 +2,4 @@
 CREATE DATABASE orderservice;
 CREATE DATABASE paymentservice;
 CREATE DATABASE inventoryservice;
+CREATE DATABASE notificationservice;

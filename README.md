@@ -81,6 +81,52 @@ PENDING -> PROCESSING -> APPROVED
 
 ## Notification Service
 
+Microsserviço de notificações construído com Domain-Driven Design (DDD), Event-Driven Architecture e Clean Architecture com Spring Boot.
+
+É um **consumidor puro da coreografia da saga**: não expõe REST e não produz eventos. Atua como um segundo leitor dos tópicos da saga (`groupId=notification-service-group`), provando o fan-out da arquitetura orientada a eventos — os mesmos eventos que fecham a saga no OrderService também disparam uma notificação aqui, de forma independente.
+
+### Features
+
+- Consome `order.created`, `payment.approved`, `payment.failed` e `inventory.reservation.failed`
+- Guarda o contato do pedido em `notification_recipients` a partir do `order.created` (nome, e-mail, telefone, `customerId`)
+- Registra o histórico de cada notificação em `notifications` (tipo, canal, destinatário, assunto, corpo, status e motivo da falha)
+- Envio via adapter fake `ConsoleNotificationSender` (canal `LOG`); `EMAIL`/`SMS` ficam para adapters posteriores
+- Entrega **best-effort**: falha de canal vira registro `FAILED` e ausência de destinatário conhecido vira `SKIPPED` — nunca dispara retentativa nem compensação de saga
+- Consumo idempotente via **Inbox** da biblioteca comum `com.lmf:platform-messaging` (não usa Outbox, pois não publica eventos)
+- Contratos de evento compartilhados em `com.lmf:platform-contracts`
+- Persistência PostgreSQL (banco `notificationservice`) com migrações Flyway
+- Observabilidade: logs estruturados com `correlationId` (via `CorrelationIdFilter`) + métricas Prometheus em `/actuator/prometheus`
+- Porta HTTP `8084` (apenas Actuator)
+- Testes unitários, de integração (Testcontainers: Postgres + Kafka) e E2E da coreografia
+
+### Notification Lifecycle
+
+```text
+evento de saga consumido
+        |
+        v
+resolve destinatário (notification_recipients)
+        |
+        +--> destinatário desconhecido --> SKIPPED
+        |
+        v
+ConsoleNotificationSender (canal LOG)
+        |
+        +--> entregue --> SENT
+        +--> falha    --> FAILED (failure_reason)
+```
+
+### Event Flow
+
+```text
+order.created ─────────────────► grava/atualiza notification_recipients + notifica "pedido criado"
+payment.approved ──────────────► notifica "pagamento aprovado"
+payment.failed ────────────────► notifica "pagamento recusado"
+inventory.reservation.failed ──► notifica "estoque indisponível"
+                                        │
+                                        └─► cada resultado é persistido em notifications
+```
+
 ---
 
 ## Inventory Service

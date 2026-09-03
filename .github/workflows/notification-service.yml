@@ -8,6 +8,7 @@ on:
     branches: [main, develop]
     paths:
       - 'services/NotificationService/**'
+      - 'shared/**'
       - 'pom.xml'
       - '.mvn/**'
       - 'mvnw'
@@ -17,6 +18,7 @@ on:
   pull_request:
     paths:
       - 'services/NotificationService/**'
+      - 'shared/**'
       - 'pom.xml'
       - '.mvn/**'
       - 'mvnw'
@@ -37,4 +39,3 @@ jobs:
     uses: ./.github/workflows/_build-module.yml
     with:
       module: services/NotificationService
-      skip-tests: true  # esqueleto: só compila até ter implementação real

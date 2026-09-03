@@ -1,13 +1,11 @@
 package com.lmf.notification.notificationservice;
 
+import com.lmf.notification.notificationservice.integration.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class NotificationServiceApplicationTests {
+class NotificationServiceApplicationTests extends AbstractIntegrationTest {
 
     @Test
     void contextLoads() {
     }
-
 }

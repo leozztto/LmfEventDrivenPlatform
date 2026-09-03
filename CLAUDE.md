@@ -13,9 +13,11 @@ Bibliotecas compartilhadas (`groupId` `com.lmf`, versão `0.0.1-SNAPSHOT`):
 - **`shared/contracts`** (`platform-contracts`) — contratos de evento (envelope + payloads da saga) compartilhados entre serviços.
 - **`shared/libraries/platform-messaging`** (`platform-messaging`) — Outbox/Inbox/DLT comuns (relay agendado, consumidor idempotente). Depende de `platform-contracts`.
 
-Só **OrderService**, **PaymentService** e **InventoryService** consomem essas libs hoje.
+**OrderService**, **PaymentService**, **InventoryService** e **NotificationService** consomem essas libs hoje.
 
-Serviços implementados: **OrderService**, **InventoryService**, **PaymentService**. `AuditService`, `AuthService`, `FraudService`, `GatewayService` e `NotificationService` são esqueletos gerados (apenas a classe `*Application` + um teste de carga de contexto) — trate-os como ainda não construídos.
+Serviços implementados: **OrderService**, **InventoryService**, **PaymentService**, **NotificationService**. `AuditService`, `AuthService`, `FraudService` e `GatewayService` são esqueletos gerados (apenas a classe `*Application` + um teste de carga de contexto) — trate-os como ainda não construídos, e o CI deles só compila (`skip-tests: true`).
+
+O **NotificationService** é um consumidor puro (sem REST, sem produção de eventos): assina `order.created`, `payment.approved`, `payment.failed` e `inventory.reservation.failed` com `groupId=notification-service-group` (um segundo leitor desses tópicos, prova de fan-out da coreografia), guarda o contato do pedido em `notification_recipients` a partir do `order.created` e registra o histórico em `notifications`. O envio é um adapter fake (`ConsoleNotificationSender`, canal `LOG`); e-mail/SMS ficam para depois. Entrega é best-effort: falha vira registro `FAILED`, não retentativa de saga. Usa o Inbox do `platform-messaging` (não o Outbox).
 
 Os scripts `scripts/*.sh` (`start-local.sh`, `seed-local.sh`, `stop-local.sh`) são placeholders vazios. As mensagens de commit são escritas em português.
 
@@ -41,9 +43,9 @@ CI **por módulo**: há um workflow fino por módulo em `.github/workflows/` (`o
 
 ### Infraestrutura local
 
-`docker compose -f infrastructure/docker/docker-compose.yml up -d` sobe Postgres (`localhost:5432`, usuário `postgres` / senha `root`), Zookeeper e Kafka (`localhost:9092`). O arquivo compose cria apenas o banco `orderservice`; **InventoryService e PaymentService esperam seus próprios bancos** (`inventoryservice`, `paymentservice`), que precisam ser criados manualmente. Os serviços rodam com `spring.jpa.hibernate.ddl-auto: validate` e dependem das migrações **Flyway** em `src/main/resources/db/migration`.
+`docker compose -f infrastructure/docker/docker-compose.yml up -d` sobe Postgres (`localhost:5432`, usuário `postgres` / senha `root`), Zookeeper e Kafka (`localhost:9092`). O `init-databases.sql` do compose cria um banco por serviço (`orderservice`, `paymentservice`, `inventoryservice`, `notificationservice`). Os serviços rodam com `spring.jpa.hibernate.ddl-auto: validate` e dependem das migrações **Flyway** em `src/main/resources/db/migration` (que também varre `db/migration/platform/*` vindo no jar do `platform-messaging`).
 
-Portas HTTP dos serviços: OrderService `8080` (padrão do Spring, não configurada), PaymentService `8082`, InventoryService `8083`. Actuator + métricas Prometheus ficam expostos em `/actuator/prometheus`.
+Portas HTTP dos serviços: OrderService `8080` (padrão do Spring, não configurada), PaymentService `8082`, InventoryService `8083`, NotificationService `8084`. Actuator + métricas Prometheus ficam expostos em `/actuator/prometheus`.
 
 ## Arquitetura
 
@@ -63,9 +65,13 @@ A comunicação entre serviços é assíncrona via Kafka. Cadeia atual:
 
 ```
 OrderService --(order.created)--> InventoryService --(inventory.reserved)--> PaymentService
+      ^                                   |                                        |
+      |          (inventory.reservation.failed / payment.approved / payment.failed)
+      +-----------------------------------+----------------------------------------+
+                         (OrderService fecha a saga; NotificationService só notifica)
 ```
 
-Tópicos: `order.created`, `order.created.dlt`, `inventory.reserved`, `inventory.reservation.dlt`. Os group ids dos consumidores seguem `<service>-service-group`.
+Tópicos: `order.created`, `inventory.reserved`, `inventory.reservation.failed`, `payment.approved`, `payment.failed` (mais a DLT `<topic>.dlt` de cada um). Os group ids dos consumidores seguem `<service>-service-group`; um mesmo tópico pode ter vários group ids (ex.: `payment.approved` é lido por `order-`, `inventory-` e `notification-service-group`).
 
 **Transactional Outbox (produtores).** Um use case persiste sua alteração de domínio e uma `OutboxEventEntity` com status `PENDING` no *mesmo* método `@Transactional` (ver `CreateOrderUseCase`). Um poller `@Scheduled` (`OutboxProcessor` / `OutboxEventProcessor`) busca `findTop100ByOutboxStatusOrderByCreatedAtAsc(PENDING)`, publica no Kafka e marca como `PUBLISHED`. Em caso de falha marca `FAILED` e então `markAsPendingRetry()` (volta para `PENDING`) ou, esgotadas as tentativas, transiciona para `DLT` e emite um `DltEvent` no tópico `*.dlt`. Novos eventos de saída devem passar por essa tabela — nunca publique no Kafka diretamente de um use case.
 

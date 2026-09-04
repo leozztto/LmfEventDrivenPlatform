@@ -2,6 +2,7 @@ package com.lmf.order.orderservice.infrastructure.messaging.consumer;
 
 import com.lmf.order.orderservice.application.usecase.UpdateOrderStatusUseCase;
 import com.lmf.order.orderservice.infrastructure.messaging.KafkaTopics;
+import com.lmf.platform.contracts.FraudRejectedEvent;
 import com.lmf.platform.contracts.InventoryReservationFailedEvent;
 import com.lmf.platform.contracts.PaymentApprovedEvent;
 import com.lmf.platform.contracts.PaymentFailedEvent;
@@ -47,5 +48,14 @@ public class OrderSagaConsumer {
         log.info("Received inventory reservation failed. orderId={}, reason={}", event.orderId(), event.reason());
 
         updateOrderStatusUseCase.cancelForInventoryFailure(event.orderId());
+    }
+
+    @KafkaListener(topics = KafkaTopics.FRAUD_REJECTED, groupId = GROUP_ID,
+            properties = "spring.json.value.default.type=com.lmf.platform.contracts.FraudRejectedEvent")
+    public void onFraudRejected(FraudRejectedEvent event) {
+
+        log.info("Received fraud rejected. orderId={}, reason={}", event.orderId(), event.reason());
+
+        updateOrderStatusUseCase.rejectForFraud(event.orderId());
     }
 }

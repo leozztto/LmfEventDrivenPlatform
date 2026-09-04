@@ -162,5 +162,28 @@ services:
       retries: 15
       start_period: 90s
 
+  fraud-service:
+    <<: *service-base
+    container_name: event-driven-fraud-service
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile
+      args:
+        MODULE: services/FraudService
+    environment:
+      <<: *service-env
+      DB_URL: jdbc:postgresql://postgres:5432/fraudservice
+      # Acima do default (5000.00) para não colidir com os cenários de e2e-docker.sh que testam
+      # PAYMENT_REJECTED usando um totalAmount alto (ex.: 20000).
+      FRAUD_RULES_MAX_ORDER_AMOUNT: "50000"
+    ports:
+      - "8085:8085"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8085/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 90s
+
 volumes:
   pgdata:

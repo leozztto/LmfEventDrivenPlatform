@@ -8,10 +8,7 @@ import com.lmf.order.orderservice.domain.model.payment.PaymentInfo;
 import com.lmf.order.orderservice.domain.model.customer.ShippingAddress;
 import com.lmf.order.orderservice.domain.model.payment.PaymentMethod;
 import com.lmf.order.orderservice.infrastructure.persistence.entity.IdempotencyEntity;
-import com.lmf.order.orderservice.infrastructure.persistence.entity.OutboxEventEntity;
 import com.lmf.order.orderservice.infrastructure.web.request.*;
-
-import static com.lmf.order.orderservice.domain.model.outbox.OutboxStatus.PENDING;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -66,11 +63,6 @@ public final class TestDataFactory {
     public static IdempotencyEntity createIdempotencyEntity(UUID orderId) {
 
         return new IdempotencyEntity(UUID.randomUUID().toString(), orderId);
-    }
-
-    public static OutboxEventEntity createOutboxEvent() {
-
-        return new OutboxEventEntity(UUID.randomUUID(), "ORDER", "ORDER_CREATED", "{}", PENDING);
     }
 
     public static CreateOrderRequest createRequest() {

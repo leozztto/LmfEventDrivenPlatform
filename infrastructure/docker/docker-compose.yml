@@ -1,14 +1,54 @@
+# Configuração comum aos serviços da plataforma (imagem construída pelo Dockerfile genérico,
+# banco no container `postgres`, Kafka pelo listener interno `kafka:29092`).
+x-service-base: &service-base
+  restart: unless-stopped
+  depends_on:
+    db-init:
+      condition: service_completed_successfully
+    kafka:
+      condition: service_healthy
+
+x-service-env: &service-env
+  DB_USERNAME: postgres
+  DB_PASSWORD: root
+  KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+
 services:
 
   postgres:
     image: postgres:15
     container_name: event-driven-postgres
     environment:
-      POSTGRES_DB: orderservice
+      POSTGRES_DB: postgres
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: root
     ports:
       - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Roda na primeira inicialização do volume (fresh). O db-init cobre os demais casos.
+      - ./init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Garante que os bancos por serviço existam a cada `up`, independentemente do estado do
+  # volume do Postgres (o hook /docker-entrypoint-initdb.d só roda em volume novo). O script
+  # é idempotente (\gexec + WHERE NOT EXISTS), então rodar de novo é inofensivo.
+  db-init:
+    image: postgres:15
+    container_name: event-driven-db-init
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: root
+    volumes:
+      - ./init-databases.sql:/init-databases.sql:ro
+    command: ["psql", "-h", "postgres", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-f", "/init-databases.sql"]
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.0
@@ -25,8 +65,125 @@ services:
       - "9092:9092"
     environment:
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      # Sem auto-criação: os beans NewTopic (KafkaTopicsConfig de cada serviço) são a única
+      # fonte de criação de tópicos, sempre com 3 partições. Se o broker criasse um tópico
+      # sob demanda (1 partição) antes do bean, o consumidor entraria no grupo enxergando só
+      # a partição 0 e mensagens publicadas nas outras partições nunca seriam consumidas.
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  order-service:
+    <<: *service-base
+    container_name: event-driven-order-service
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile
+      args:
+        MODULE: services/OrderService
+    environment:
+      <<: *service-env
+      SERVER_PORT: 8081
+      DB_URL: jdbc:postgresql://postgres:5432/orderservice
+    ports:
+      - "8081:8081"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 90s
+
+  inventory-service:
+    <<: *service-base
+    container_name: event-driven-inventory-service
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile
+      args:
+        MODULE: services/InventoryService
+    environment:
+      <<: *service-env
+      DB_URL: jdbc:postgresql://postgres:5432/inventoryservice
+    ports:
+      - "8083:8083"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8083/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 90s
+
+  payment-service:
+    <<: *service-base
+    container_name: event-driven-payment-service
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile
+      args:
+        MODULE: services/PaymentService
+    environment:
+      <<: *service-env
+      DB_URL: jdbc:postgresql://postgres:5432/paymentservice
+    ports:
+      - "8082:8082"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8082/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 90s
+
+  notification-service:
+    <<: *service-base
+    container_name: event-driven-notification-service
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile
+      args:
+        MODULE: services/NotificationService
+    environment:
+      <<: *service-env
+      DB_URL: jdbc:postgresql://postgres:5432/notificationservice
+    ports:
+      - "8084:8084"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8084/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 90s
+
+  fraud-service:
+    <<: *service-base
+    container_name: event-driven-fraud-service
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile
+      args:
+        MODULE: services/FraudService
+    environment:
+      <<: *service-env
+      DB_URL: jdbc:postgresql://postgres:5432/fraudservice
+      # Acima do default (5000.00) para não colidir com os cenários de e2e-docker.sh que testam
+      # PAYMENT_REJECTED usando um totalAmount alto (ex.: 20000).
+      FRAUD_RULES_MAX_ORDER_AMOUNT: "50000"
+    ports:
+      - "8085:8085"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8085/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 90s
+
+volumes:
+  pgdata:

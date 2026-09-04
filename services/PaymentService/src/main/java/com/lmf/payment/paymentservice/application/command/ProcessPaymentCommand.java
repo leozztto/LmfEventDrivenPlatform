@@ -1,7 +1,7 @@
 package com.lmf.payment.paymentservice.application.command;
 
 import com.lmf.payment.paymentservice.domain.model.PaymentMethod;
-import com.lmf.payment.paymentservice.events.EventMessage;
+import com.lmf.platform.contracts.EventMessage;
 
 import java.math.BigDecimal;
 import java.util.UUID;

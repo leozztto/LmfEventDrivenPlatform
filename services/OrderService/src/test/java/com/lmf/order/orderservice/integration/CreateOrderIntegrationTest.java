@@ -1,9 +1,10 @@
 package com.lmf.order.orderservice.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.lmf.order.orderservice.domain.model.outbox.OutboxStatus;
-import com.lmf.order.orderservice.domain.repository.OutboxEventRepository;
-import com.lmf.order.orderservice.infrastructure.persistence.entity.OutboxEventEntity;
+import com.lmf.platform.messaging.OutboxEvent;
+import com.lmf.platform.messaging.OutboxEventRepository;
+import com.lmf.platform.messaging.OutboxStatus;
+import com.lmf.platform.messaging.OutboxRelay;
 import com.lmf.order.orderservice.infrastructure.persistence.repository.SpringDataIdempotencyRepository;
 import com.lmf.order.orderservice.infrastructure.persistence.repository.SpringDataOrderRepository;
 import com.lmf.order.orderservice.infrastructure.web.request.CreateOrderRequest;
@@ -13,7 +14,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -24,9 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
 @AutoConfigureMockMvc
-class CreateOrderIntegrationTest {
+class CreateOrderIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -42,6 +41,9 @@ class CreateOrderIntegrationTest {
 
     @Autowired
     private SpringDataIdempotencyRepository springDataIdempotencyRepository;
+
+    @Autowired
+    private OutboxRelay outboxRelay;
 
     @BeforeEach
     void setup() {
@@ -59,15 +61,17 @@ class CreateOrderIntegrationTest {
 
         assertFalse(springDataOrderRepository.findAll().isEmpty());
 
-        List<OutboxEventEntity> events = outboxEventRepository.findAll();
+        List<OutboxEvent> events = outboxEventRepository.findAll();
 
         assertFalse(events.isEmpty());
 
-        OutboxEventEntity outboxEventEntity = events.get(0);
+        assertEquals("ORDER_CREATED", events.get(0).getEventType());
+        assertEquals(OutboxStatus.PENDING, events.get(0).getStatus());
 
-        assertEquals("ORDER_CREATED", outboxEventEntity.getEventType());
+        // O relay é determinístico no teste (scheduler desligado): invocamos manualmente.
+        outboxRelay.process();
 
-        assertEquals(OutboxStatus.PUBLISHED, outboxEventEntity.getOutboxStatus());
+        assertEquals(OutboxStatus.PUBLISHED, outboxEventRepository.findAll().get(0).getStatus());
     }
 
     @Test

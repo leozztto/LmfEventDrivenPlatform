@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.lmf</groupId>
+	<artifactId>lmf-event-driven-platform</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>pom</packaging>
+
+	<name>LmfEventDrivenPlatform</name>
+	<description>Aggregator para build multi-módulo (contratos compartilhados + serviços).</description>
+
+	<modules>
+		<!-- bibliotecas compartilhadas -->
+		<module>shared/contracts</module>
+		<module>shared/libraries/platform-messaging</module>
+		<!-- serviços -->
+		<module>services/AuthService</module>
+		<module>services/AuditService</module>
+		<module>services/FraudService</module>
+		<module>services/GatewayService</module>
+		<module>services/NotificationService</module>
+		<module>services/OrderService</module>
+		<module>services/PaymentService</module>
+		<module>services/InventoryService</module>
+	</modules>
+
+</project>

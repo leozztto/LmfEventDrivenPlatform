@@ -1,15 +1,10 @@
 package com.lmf.payment.paymentservice.application.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.lmf.payment.paymentservice.domain.model.event.PaymentApprovedEvent;
-import com.lmf.payment.paymentservice.domain.model.event.PaymentFailedEvent;
-import com.lmf.payment.paymentservice.domain.model.event.PaymentProcessingEvent;
-import com.lmf.payment.paymentservice.domain.exception.EventSerializationException;
 import com.lmf.payment.paymentservice.domain.model.Payment;
-import com.lmf.payment.paymentservice.domain.repository.OutboxEventRepository;
-import com.lmf.payment.paymentservice.infrastructure.outbox.OutboxStatus;
-import com.lmf.payment.paymentservice.infrastructure.persistence.entity.OutboxEventEntity;
+import com.lmf.platform.contracts.PaymentApprovedEvent;
+import com.lmf.platform.contracts.PaymentFailedEvent;
+import com.lmf.platform.contracts.PaymentMethod;
+import com.lmf.platform.messaging.OutboxWriter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,60 +17,46 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class PaymentEventService {
 
-    private final OutboxEventRepository outboxEventRepository;
+    private static final String EVENT_VERSION = "v1";
 
-    private final ObjectMapper objectMapper;
+    private final OutboxWriter outboxWriter;
 
     public void publish(Payment payment) {
 
         switch (payment.getPaymentStatus()) {
 
-            case PENDING -> publishProcessing(payment);
-
             case APPROVED -> publishApproved(payment);
 
             case FAILED -> publishFailed(payment);
+
+            default -> log.warn("No outbox event mapped for payment status. paymentId={}, status={}", payment.getId(), payment.getPaymentStatus());
         }
-    }
-
-    private void publishProcessing(Payment payment) {
-
-        PaymentProcessingEvent paymentProcessingEvent = new PaymentProcessingEvent(payment.getId(), payment.getOrderId(), payment.getCustomerId(), payment.getAmount(), payment.getCurrency(), payment.getPaymentMethod(), OffsetDateTime.now());
-
-        saveOutbox(payment.getId(), "PAYMENT_PROCESSING", paymentProcessingEvent);
     }
 
     private void publishApproved(Payment payment) {
 
-        PaymentApprovedEvent paymentApprovedEvent = new PaymentApprovedEvent(payment.getId(), payment.getOrderId(), payment.getCustomerId(), payment.getAmount(), payment.getCurrency(), payment.getPaymentMethod(), payment.getTransactionId(), payment.getProvider(), payment.getPaidAt());
+        PaymentApprovedEvent event = new PaymentApprovedEvent(
+                UUID.randomUUID(), PaymentApprovedEvent.TYPE, EVENT_VERSION, OffsetDateTime.now(),
+                payment.getId(), payment.getOrderId(), payment.getCustomerId(),
+                payment.getAmount(), payment.getCurrency(), toContractMethod(payment),
+                payment.getTransactionId(), payment.getProvider());
 
-        saveOutbox(payment.getId(), "PAYMENT_APPROVED", paymentApprovedEvent);
+        outboxWriter.write(payment.getId(), "PAYMENT", PaymentApprovedEvent.TYPE, event);
     }
 
     private void publishFailed(Payment payment) {
 
-        PaymentFailedEvent paymentFailedEvent = new PaymentFailedEvent(payment.getId(), payment.getOrderId(), payment.getCustomerId(), payment.getAmount(), payment.getCurrency(), payment.getPaymentMethod(), payment.getFailureReason(), payment.getGatewayStatus(), payment.getFailedAt());
+        PaymentFailedEvent event = new PaymentFailedEvent(
+                UUID.randomUUID(), PaymentFailedEvent.TYPE, EVENT_VERSION, OffsetDateTime.now(),
+                payment.getId(), payment.getOrderId(), payment.getCustomerId(),
+                payment.getAmount(), payment.getCurrency(), toContractMethod(payment),
+                payment.getFailureReason(), payment.getGatewayStatus());
 
-        saveOutbox(payment.getId(), "PAYMENT_FAILED", paymentFailedEvent);
+        outboxWriter.write(payment.getId(), "PAYMENT", PaymentFailedEvent.TYPE, event);
     }
 
-    private void saveOutbox(UUID aggregateId, String eventType, Object payloadObject) {
+    private PaymentMethod toContractMethod(Payment payment) {
 
-        try {
-
-            String payload = objectMapper.writeValueAsString(payloadObject);
-
-            OutboxEventEntity outboxEventEntity = new OutboxEventEntity(aggregateId, "PAYMENT", eventType, payload, OutboxStatus.PENDING);
-
-            outboxEventRepository.save(outboxEventEntity);
-
-            log.info("Outbox event created. eventType={}, eventId={}", "PAYMENT_CREATED", outboxEventEntity.getId());
-
-        } catch (JsonProcessingException ex) {
-
-            log.error("Failed to serialize payment created event. payment={}", payloadObject, ex);
-
-            throw new EventSerializationException("Failed to serialize event", ex);
-        }
+        return PaymentMethod.valueOf(payment.getPaymentMethod().name());
     }
 }

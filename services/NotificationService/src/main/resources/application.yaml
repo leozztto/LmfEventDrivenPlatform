@@ -1,3 +1,74 @@
 spring:
   application:
     name: notification-service
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/notificationservice}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+
+  flyway:
+    enabled: true
+    # classpath:db/migration varre recursivamente — inclui db/migration/platform/* (inbox/outbox)
+    # que vêm no jar do platform-messaging. Só o inbox é usado aqui.
+    locations: classpath:db/migration
+
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: false
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+    consumer:
+      group-id: notification-service-group
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.lmf.platform.contracts"
+        spring.json.use.type.headers: false
+
+    # Não produz eventos de negócio; o KafkaTemplate serve só ao DeadLetterPublishingRecoverer.
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+    template:
+      observation-enabled: true
+    listener:
+      observation-enabled: true
+      ack-mode: record
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+
+  endpoint:
+    health:
+      show-details: always
+
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+  tracing:
+    sampling:
+      probability: 1.0
+
+server:
+  port: 8084
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{traceId:-},%X{spanId:-}] correlationId=%X{correlationId:-} %logger{36} - %msg%n"

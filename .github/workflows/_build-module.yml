@@ -1,0 +1,61 @@
+name: _build-module
+
+# Workflow reutilizável: constrói UM módulo do monorepo de forma isolada,
+# pelo reator (`mvnw -pl <módulo> -am`), que compila antes só as bibliotecas
+# compartilhadas de que aquele módulo precisa. Cada módulo tem seu próprio
+# workflow fino (order-service.yml, auth-service.yml, ...) que chama este.
+
+on:
+  workflow_call:
+    inputs:
+      module:
+        description: "Caminho do módulo Maven (ex.: services/OrderService)"
+        required: true
+        type: string
+      java-version:
+        required: false
+        type: string
+        default: "17"
+      goal:
+        description: "Goal Maven. `verify` roda os testes de integração (Testcontainers/Docker)."
+        required: false
+        type: string
+        default: "verify"
+      skip-tests:
+        description: "Só compilar, sem rodar testes. Usado pelos serviços ainda em esqueleto."
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar JDK ${{ inputs.java-version }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ inputs.java-version }}
+          cache: maven
+
+      - name: Build & test — ${{ inputs.module }}
+        run: |
+          chmod +x mvnw
+          ./mvnw -B -ntp -pl "${{ inputs.module }}" -am ${{ inputs.goal }} ${{ inputs.skip-tests && '-DskipTests' || '' }}
+
+      - name: Publicar relatórios de teste
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            **/target/surefire-reports/*.xml
+            **/target/failsafe-reports/*.xml
+          if-no-files-found: ignore
+          retention-days: 7

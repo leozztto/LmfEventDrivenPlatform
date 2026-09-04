@@ -9,4 +9,7 @@ public interface PaymentGateway {
     PaymentGatewayResponse process(PaymentGatewayRequest paymentGatewayRequest);
 
     PaymentMethod supports();
+
+    /** Nome do provedor/adquirente que efetivamente processa o pagamento (ex.: {@code MERCADO_PAGO}). */
+    String provider();
 }

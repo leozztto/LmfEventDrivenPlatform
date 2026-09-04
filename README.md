@@ -206,6 +206,37 @@ Payment Service --> payment.approved | payment.failed
 
 ## Audit Service
 
+Microsserviço de auditoria construído com Domain-Driven Design (DDD), Event-Driven Architecture e Clean Architecture com Spring Boot.
+
+É um **event sink append-only**: um terceiro leitor de todos os sete tópicos da coreografia da saga (`groupId=audit-service-group`), sem participar do fluxo de negócio — só grava o envelope de cada evento consumido e expõe uma consulta de leitura. Não expõe nenhum endpoint de escrita e não publica eventos.
+
+### Features
+
+- Consome os sete tópicos da saga: `order.created`, `fraud.approved`, `fraud.rejected`, `inventory.reserved`, `inventory.reservation.failed`, `payment.approved`, `payment.failed` — um consumidor por tópico, reaproveitando os contratos tipados de `com.lmf:platform-contracts`
+- Grava uma linha append-only por evento em `audit_events` (tópico, `eventId`, `eventType`, `aggregateId` = `orderId`, payload resserializado, `traceId`/`correlationId` quando disponíveis no MDC)
+- Consulta de leitura: `GET /api/v1/audit-events?aggregateId=` ou `?correlationId=` (exatamente um dos dois filtros)
+- Consumo idempotente via **Inbox** da biblioteca comum `com.lmf:platform-messaging` (não usa Outbox, pois não publica eventos — mesma decisão do NotificationService)
+- Retry com backoff exponencial + Dead Letter Topic por tópico consumido
+- Persistência PostgreSQL (banco `auditservice`) com migrações Flyway
+- Observabilidade: logs estruturados com `correlationId`/`traceId` + métricas Prometheus em `/actuator/prometheus`
+- Porta HTTP `8086`
+- Testes unitários, de integração (Testcontainers: Postgres + Kafka) e E2E da coreografia (todos os sete tópicos, incluindo dedupe por redelivery)
+
+> `correlationId` fica `null` na maior parte das vezes hoje: nenhum produtor da plataforma o propaga como header Kafka (só existe no MDC durante a requisição HTTP de origem). Ver `docs/adr/0006-audit-event-sink.md`.
+
+### Event Flow
+
+```text
+order.created / fraud.approved / fraud.rejected / inventory.reserved /
+inventory.reservation.failed / payment.approved / payment.failed
+        |
+        v
+  consumidor do tópico (Inbox dedupe por eventId)
+        |
+        v
+  grava topic + envelope + traceId/correlationId em audit_events
+```
+
 ---
 
 # Stack Tecnológica
@@ -303,14 +334,16 @@ cd services/OrderService && ./mvnw test
 ### Rodar localmente com Docker
 
 ```bash
-# Sobe tudo em containers (Postgres + Kafka + os 4 serviços implementados):
+# Sobe tudo em containers (Postgres + Kafka + os 6 serviços implementados):
 docker compose -f infrastructure/docker/docker-compose.yml up -d --build
 
-# Portas: OrderService 8081, PaymentService 8082, InventoryService 8083, NotificationService 8084
+# Portas: OrderService 8081, PaymentService 8082, InventoryService 8083, NotificationService 8084,
+# FraudService 8085, AuditService 8086
 # Derruba tudo (com volumes):
 docker compose -f infrastructure/docker/docker-compose.yml down -v
 
-# E2E da saga rodando nos containers (aprovação + recusa/compensação + fan-out + DLT):
+# E2E da saga rodando nos containers (aprovação + recusa/compensação + rejeição por fraude +
+# fan-out + trilha de auditoria + DLT):
 ./scripts/e2e-docker.sh
 ```
 

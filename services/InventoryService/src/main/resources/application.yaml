@@ -47,7 +47,7 @@ spring:
       properties:
         spring.json.trusted.packages: "com.lmf.platform.contracts"
         spring.json.use.type.headers: false
-        spring.json.value.default.type: com.lmf.platform.contracts.OrderCreatedEvent
+        spring.json.value.default.type: com.lmf.platform.contracts.FraudApprovedEvent
 
     template:
       observation-enabled: true

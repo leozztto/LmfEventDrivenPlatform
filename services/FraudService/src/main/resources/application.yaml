@@ -1,3 +1,84 @@
 spring:
   application:
     name: fraud-service
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/fraudservice}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+
+  flyway:
+    enabled: true
+    # classpath:db/migration varre recursivamente — inclui db/migration/platform/* (inbox/outbox)
+    # que vêm no jar do platform-messaging.
+    locations: classpath:db/migration
+
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: false
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+    producer:
+      acks: all
+      retries: 3
+      properties:
+        enable.idempotence: true
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+    consumer:
+      group-id: fraud-service-group
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.lmf.platform.contracts"
+        spring.json.use.type.headers: false
+        spring.json.value.default.type: com.lmf.platform.contracts.OrderCreatedEvent
+
+    template:
+      observation-enabled: true
+    listener:
+      observation-enabled: true
+      ack-mode: record
+
+platform:
+  outbox:
+    poll-interval-ms: 5000
+    dlt-topic: fraud.outbox.dlt
+
+fraud:
+  rules:
+    # Placeholder de env var (não fixo) para os scripts/compose de E2E poderem subir o limite sem
+    # colidir com cenários que testam PAYMENT_REJECTED usando um totalAmount alto.
+    max-order-amount: ${FRAUD_RULES_MAX_ORDER_AMOUNT:5000.00}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus,metrics,info
+
+  endpoint:
+    health:
+      show-details: always
+
+  tracing:
+    sampling:
+      probability: 1.0
+
+server:
+  port: 8085
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{traceId:-},%X{spanId:-}] correlationId=%X{correlationId:-} %logger{36} - %msg%n"

@@ -8,6 +8,7 @@ on:
     branches: [main, develop]
     paths:
       - 'services/FraudService/**'
+      - 'shared/**'
       - 'pom.xml'
       - '.mvn/**'
       - 'mvnw'
@@ -17,6 +18,7 @@ on:
   pull_request:
     paths:
       - 'services/FraudService/**'
+      - 'shared/**'
       - 'pom.xml'
       - '.mvn/**'
       - 'mvnw'
@@ -37,4 +39,3 @@ jobs:
     uses: ./.github/workflows/_build-module.yml
     with:
       module: services/FraudService
-      skip-tests: true  # esqueleto: só compila até ter implementação real

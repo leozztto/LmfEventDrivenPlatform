@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 #
-# E2E da saga rodando 100% nos containers do Docker Desktop (Postgres + Kafka + os 4 serviços).
-# Sobe tudo com `docker compose up -d --build`, exercita os dois caminhos da coreografia e valida:
+# E2E da saga rodando 100% nos containers do Docker Desktop (Postgres + Kafka + os 5 serviços).
+# Sobe tudo com `docker compose up -d --build`, exercita os três caminhos da coreografia e valida:
 #
-#   1. Aprovado:  order.created -> inventory.reserved -> payment.approved
+#   1. Aprovado:  order.created -> fraud.approved -> inventory.reserved -> payment.approved
 #                 -> pedido PAYMENT_APPROVED, estoque debitado, reserva CONFIRMED
-#   2. Recusado:  order.created -> inventory.reserved -> payment.failed
+#   2. Recusado:  order.created -> fraud.approved -> inventory.reserved -> payment.failed
 #                 -> pedido PAYMENT_REJECTED, reserva RELEASED, estoque de volta ao original
 #      (o FakePaymentGateway recusa quando amount > 10000)
+#   3. Fraude:    order.created -> fraud.rejected -> pedido FRAUD_REJECTED, sem reserva de estoque
+#      (cliente com e-mail do seed de blocklist do FraudService)
 #
 # Também confere o fan-out (o NotificationService registra uma notificação por evento) e que
 # nenhuma mensagem parou em tópico .dlt.
@@ -26,13 +28,14 @@ RUN_ID="$(date +%s)"
 ORDER_URL="http://localhost:8081"
 INVENTORY_URL="http://localhost:8083"
 NOTIFICATION_URL="http://localhost:8084"
+FRAUD_URL="http://localhost:8085"
 
 cleanup() {
   local ec=$?
   [ $ec -ne 0 ] && {
     echo
     echo "--- FALHOU (exit $ec). Últimas linhas dos serviços: ---"
-    "${COMPOSE[@]}" logs --tail=25 order-service inventory-service payment-service notification-service || true
+    "${COMPOSE[@]}" logs --tail=25 order-service inventory-service payment-service notification-service fraud-service || true
   }
   if [ "${E2E_KEEP:-0}" = "1" ]; then
     echo "E2E_KEEP=1 — stack mantido de pé. Derrube com: ${COMPOSE[*]} down -v"
@@ -116,16 +119,17 @@ await_notification() {
   return 1
 }
 
-echo "=== 1/6 build + up dos containers ==="
+echo "=== 1/7 build + up dos containers ==="
 if [ "${E2E_NO_BUILD:-0}" = "1" ]; then "${COMPOSE[@]}" up -d; else "${COMPOSE[@]}" up -d --build; fi
 
-echo "=== 2/6 aguardando os serviços ficarem prontos ==="
+echo "=== 2/7 aguardando os serviços ficarem prontos ==="
 wait_health order        "$ORDER_URL"
+wait_health fraud        "$FRAUD_URL"
 wait_health inventory    "$INVENTORY_URL"
 wait_health payment      "http://localhost:8082"
 wait_health notification "$NOTIFICATION_URL"
 
-echo "=== 3/6 caminho APROVADO ==="
+echo "=== 3/7 caminho APROVADO ==="
 APPROVED_PID=$(create_product "SKU-E2E-OK-$RUN_ID" "Notebook" 1500 10)
 [ -n "$APPROVED_PID" ] || fail "não obtive o id do produto"
 echo "  produto=$APPROVED_PID (estoque inicial 10)"
@@ -143,7 +147,7 @@ RS=$(printf '%s' "$APPROVED_PRODUCT" | json_number reservedQuantity)
 [ "$RS" = "0" ] || fail "estoque reservado=$RS (esperado 0 após confirmar)"
 ok "estoque debitado: available=8 reserved=0"
 
-echo "=== 4/6 caminho RECUSADO + compensação ==="
+echo "=== 4/7 caminho RECUSADO + compensação ==="
 DECLINED_PID=$(create_product "SKU-E2E-DECLINE-$RUN_ID" "Servidor" 10000 10)
 [ -n "$DECLINED_PID" ] || fail "não obtive o id do produto"
 echo "  produto=$DECLINED_PID (estoque inicial 10)"
@@ -162,12 +166,29 @@ RS=$(printf '%s' "$DECLINED_PRODUCT" | json_number reservedQuantity)
 [ "$RS" = "0" ]  || fail "estoque reservado=$RS (esperado 0)"
 ok "reserva compensada: available=10 reserved=0"
 
-echo "=== 5/6 fan-out do NotificationService ==="
+echo "=== 5/7 caminho REJEITADO POR FRAUDE ==="
+FRAUD_PID=$(create_product "SKU-E2E-FRAUD-$RUN_ID" "Mouse" 100 10)
+[ -n "$FRAUD_PID" ] || fail "não obtive o id do produto"
+echo "  produto=$FRAUD_PID (estoque inicial 10)"
+# "blocked.customer@example.com" vem do seed V3__seed_fraud_blocklist.sql do FraudService.
+FRAUD_OID=$(create_order "$FRAUD_PID" 1 100 100 "e2e-fraud-$RUN_ID" "Cliente Bloqueado" "blocked.customer@example.com")
+[ -n "$FRAUD_OID" ] || fail "não obtive o orderId"
+echo "  pedido=$FRAUD_OID (e-mail na blocklist)"
+FRAUD_STATUS=$(await_saga "$FRAUD_OID")
+echo "  status final=$FRAUD_STATUS"
+[ "$FRAUD_STATUS" = "FRAUD_REJECTED" ] || fail "esperado FRAUD_REJECTED, veio $FRAUD_STATUS"
+ok "pedido rejeitado por fraude"
+FRAUD_PRODUCT=$(api_get "$INVENTORY_URL/api/v1/products/$FRAUD_PID")
+AV=$(printf '%s' "$FRAUD_PRODUCT" | json_number availableQuantity)
+[ "$AV" = "10" ] || fail "estoque disponível=$AV (esperado 10 — não deveria ter sido reservado)"
+ok "nenhuma reserva de estoque para o pedido rejeitado por fraude"
+
+echo "=== 6/7 fan-out do NotificationService ==="
 await_notification "$APPROVED_OID" || fail "NotificationService não registrou nada para o pedido aprovado"
 await_notification "$DECLINED_OID" || fail "NotificationService não registrou nada para o pedido recusado"
-ok "notificações emitidas para os dois pedidos"
+ok "notificações emitidas para os pedidos aprovado e recusado"
 
-echo "=== 6/6 checando DLTs (devem estar vazias) ==="
+echo "=== 7/7 checando DLTs (devem estar vazias) ==="
 DLT_MSGS=$("${COMPOSE[@]}" exec -T kafka bash -c '
   total=0
   for t in $(kafka-topics --bootstrap-server localhost:9092 --list | grep "\.dlt$"); do
@@ -181,4 +202,4 @@ DLT_MSGS=$("${COMPOSE[@]}" exec -T kafka bash -c '
 ok "nenhuma mensagem em DLT"
 
 echo
-echo "E2E OK — saga funcionando nos containers do Docker Desktop (aprovação + recusa/compensação + fan-out)."
+echo "E2E OK — saga funcionando nos containers do Docker Desktop (aprovação + recusa/compensação + rejeição por fraude + fan-out)."

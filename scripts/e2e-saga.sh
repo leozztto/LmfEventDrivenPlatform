@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# E2E da saga: sobe infra + os 3 serviços, cadastra um produto, cria um pedido e acompanha
-# order.created -> inventory.reserved -> payment.approved -> pedido PAYMENT_APPROVED.
+# E2E da saga: sobe infra + os 4 serviços, cadastra um produto, cria um pedido e acompanha
+# order.created -> fraud.approved -> inventory.reserved -> payment.approved -> pedido PAYMENT_APPROVED.
 #
 # Pré-requisitos: Docker, Java 17+, os jars buildados (./mvnw -q -DskipTests install).
 # Uso: ./scripts/e2e-saga.sh
@@ -46,11 +46,13 @@ start_service() {
 }
 
 echo "=== 2/5 serviços ==="
+start_service fraud     FraudService     8085 fraudservice
 start_service inventory InventoryService 8083 inventoryservice
 start_service payment   PaymentService   8082 paymentservice
 start_service order     OrderService     8081 orderservice
 
 wait_up() { local url="$1"; for _ in $(seq 1 60); do curl -sf "$url/actuator/health" >/dev/null 2>&1 && return 0; sleep 2; done; echo "timeout: $url"; return 1; }
+wait_up http://localhost:8085
 wait_up http://localhost:8083
 wait_up http://localhost:8082
 wait_up http://localhost:8081

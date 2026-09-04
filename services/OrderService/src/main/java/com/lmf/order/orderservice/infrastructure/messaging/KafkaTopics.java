@@ -16,5 +16,7 @@ public final class KafkaTopics {
 
     public static final String INVENTORY_RESERVATION_FAILED = "inventory.reservation.failed";
 
+    public static final String FRAUD_REJECTED = "fraud.rejected";
+
     public static final String SAGA_DLT = "order.saga.dlt";
 }

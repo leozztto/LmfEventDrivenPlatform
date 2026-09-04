@@ -5,9 +5,9 @@ import com.lmf.inventory.inventoryservice.domain.model.ProductStatus;
 import com.lmf.inventory.inventoryservice.domain.model.StockReservation;
 import com.lmf.inventory.inventoryservice.domain.repository.ProductRepository;
 import com.lmf.inventory.inventoryservice.domain.repository.StockReservationRepository;
+import com.lmf.platform.contracts.FraudApprovedEvent;
 import com.lmf.platform.contracts.InventoryReservationFailedEvent;
 import com.lmf.platform.contracts.InventoryReservedEvent;
-import com.lmf.platform.contracts.OrderCreatedEvent;
 import com.lmf.platform.contracts.OrderItem;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -55,11 +55,11 @@ class ReserveInventoryServiceTest {
 
         Product product = createProduct(productId, 10);
 
-        OrderCreatedEvent orderCreatedEvent = createOrderCreatedEvent(orderId, productId, 3);
+        FraudApprovedEvent fraudApprovedEvent = createFraudApprovedEvent(orderId, productId, 3);
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
 
-        reserveInventoryService.execute(orderCreatedEvent);
+        reserveInventoryService.execute(fraudApprovedEvent);
 
         verify(productRepository).update(product);
         verify(productRepository, never()).save(any());
@@ -89,11 +89,11 @@ class ReserveInventoryServiceTest {
         UUID orderId = UUID.randomUUID();
         UUID productId = UUID.randomUUID();
 
-        OrderCreatedEvent orderCreatedEvent = createOrderCreatedEvent(orderId, productId, 2);
+        FraudApprovedEvent fraudApprovedEvent = createFraudApprovedEvent(orderId, productId, 2);
 
         when(productRepository.findById(productId)).thenReturn(Optional.empty());
 
-        assertThatCode(() -> reserveInventoryService.execute(orderCreatedEvent)).doesNotThrowAnyException();
+        assertThatCode(() -> reserveInventoryService.execute(fraudApprovedEvent)).doesNotThrowAnyException();
 
         verify(productRepository, never()).update(any());
         verify(productRepository, never()).save(any());
@@ -120,11 +120,11 @@ class ReserveInventoryServiceTest {
 
         Product product = createProduct(productId, 1);
 
-        OrderCreatedEvent orderCreatedEvent = createOrderCreatedEvent(orderId, productId, 10);
+        FraudApprovedEvent fraudApprovedEvent = createFraudApprovedEvent(orderId, productId, 10);
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
 
-        assertThatCode(() -> reserveInventoryService.execute(orderCreatedEvent)).doesNotThrowAnyException();
+        assertThatCode(() -> reserveInventoryService.execute(fraudApprovedEvent)).doesNotThrowAnyException();
 
         verify(productRepository, never()).update(any());
         verify(productRepository, never()).save(any());
@@ -144,12 +144,12 @@ class ReserveInventoryServiceTest {
         Product firstProduct = createProduct(product1, 10);
         Product secondProduct = createProduct(product2, 20);
 
-        OrderCreatedEvent orderCreatedEvent = createOrderCreatedEventWithTwoItems(orderId, product1, product2);
+        FraudApprovedEvent fraudApprovedEvent = createFraudApprovedEventWithTwoItems(orderId, product1, product2);
 
         when(productRepository.findById(product1)).thenReturn(Optional.of(firstProduct));
         when(productRepository.findById(product2)).thenReturn(Optional.of(secondProduct));
 
-        reserveInventoryService.execute(orderCreatedEvent);
+        reserveInventoryService.execute(fraudApprovedEvent);
 
         verify(productRepository, times(2)).update(any(Product.class));
         verify(stockReservationRepository, times(2)).save(any(StockReservation.class));
@@ -174,12 +174,12 @@ class ReserveInventoryServiceTest {
         Product firstProduct = createProduct(product1, 10);
         Product secondProduct = createProduct(product2, 1);
 
-        OrderCreatedEvent orderCreatedEvent = orderEvent(orderId, item(product1, 2), item(product2, 50));
+        FraudApprovedEvent fraudApprovedEvent = fraudEvent(orderId, item(product1, 2), item(product2, 50));
 
         when(productRepository.findById(product1)).thenReturn(Optional.of(firstProduct));
         when(productRepository.findById(product2)).thenReturn(Optional.of(secondProduct));
 
-        reserveInventoryService.execute(orderCreatedEvent);
+        reserveInventoryService.execute(fraudApprovedEvent);
 
         verify(productRepository, never()).update(any());
         verify(reserveInventoryEventService).publishFailure(any(InventoryReservationFailedEvent.class));
@@ -190,14 +190,14 @@ class ReserveInventoryServiceTest {
         return Product.restore(id, "SKU-" + id, "Notebook", "Notebook Gamer", BigDecimal.valueOf(5000), stock, 0, ProductStatus.ACTIVE, OffsetDateTime.now().minusDays(1), OffsetDateTime.now());
     }
 
-    private OrderCreatedEvent createOrderCreatedEvent(UUID orderId, UUID productId, Integer quantity) {
+    private FraudApprovedEvent createFraudApprovedEvent(UUID orderId, UUID productId, Integer quantity) {
 
-        return orderEvent(orderId, item(productId, quantity));
+        return fraudEvent(orderId, item(productId, quantity));
     }
 
-    private OrderCreatedEvent createOrderCreatedEventWithTwoItems(UUID orderId, UUID product1, UUID product2) {
+    private FraudApprovedEvent createFraudApprovedEventWithTwoItems(UUID orderId, UUID product1, UUID product2) {
 
-        return orderEvent(orderId, item(product1, 2), item(product2, 5));
+        return fraudEvent(orderId, item(product1, 2), item(product2, 5));
     }
 
     private OrderItem item(UUID productId, int quantity) {
@@ -205,8 +205,8 @@ class ReserveInventoryServiceTest {
         return new OrderItem(productId, quantity, BigDecimal.valueOf(10), BigDecimal.valueOf(10L * quantity));
     }
 
-    private OrderCreatedEvent orderEvent(UUID orderId, OrderItem... items) {
+    private FraudApprovedEvent fraudEvent(UUID orderId, OrderItem... items) {
 
-        return new OrderCreatedEvent(UUID.randomUUID(), OrderCreatedEvent.TYPE, "v1", OffsetDateTime.now(), orderId, "PENDING_PAYMENT", BigDecimal.TEN, null, null, null, List.of(items));
+        return new FraudApprovedEvent(UUID.randomUUID(), FraudApprovedEvent.TYPE, "v1", OffsetDateTime.now(), orderId, null, BigDecimal.TEN, null, List.of(items));
     }
 }

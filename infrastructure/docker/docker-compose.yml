@@ -185,5 +185,25 @@ services:
       retries: 15
       start_period: 90s
 
+  audit-service:
+    <<: *service-base
+    container_name: event-driven-audit-service
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile
+      args:
+        MODULE: services/AuditService
+    environment:
+      <<: *service-env
+      DB_URL: jdbc:postgresql://postgres:5432/auditservice
+    ports:
+      - "8086:8086"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8086/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 90s
+
 volumes:
   pgdata:

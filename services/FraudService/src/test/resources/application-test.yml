@@ -1,0 +1,10 @@
+# Perfil de teste de integração.
+spring:
+  kafka:
+    listener:
+      auto-startup: false
+
+# Declaração de tópicos desligada — o teste de round-trip usa auto-create do broker.
+platform:
+  kafka:
+    declare-topics: false

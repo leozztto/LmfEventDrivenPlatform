@@ -93,6 +93,19 @@ public class Order {
         this.orderStatus = OrderStatus.CANCELLED;
     }
 
+    /**
+     * Rejeita o pedido por decisão do FraudService — ocorre antes de qualquer reserva de estoque ou
+     * processamento de pagamento.
+     */
+    public void rejectForFraud() {
+
+        if (orderStatus != OrderStatus.PENDING_PAYMENT) {
+            throw new InvalidOrderStatusException(orderStatus.name());
+        }
+
+        this.orderStatus = OrderStatus.FRAUD_REJECTED;
+    }
+
     public UUID getId() {
         return id;
     }

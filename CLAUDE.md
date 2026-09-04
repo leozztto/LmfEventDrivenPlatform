@@ -19,7 +19,7 @@ Serviços implementados: **OrderService**, **InventoryService**, **PaymentServic
 
 O **NotificationService** é um consumidor puro (sem REST, sem produção de eventos): assina `order.created`, `payment.approved`, `payment.failed` e `inventory.reservation.failed` com `groupId=notification-service-group` (um segundo leitor desses tópicos, prova de fan-out da coreografia), guarda o contato do pedido em `notification_recipients` a partir do `order.created` e registra o histórico em `notifications`. O envio é um adapter fake (`ConsoleNotificationSender`, canal `LOG`); e-mail/SMS ficam para depois. Entrega é best-effort: falha vira registro `FAILED`, não retentativa de saga. Usa o Inbox do `platform-messaging` (não o Outbox).
 
-Os scripts `scripts/*.sh` (`start-local.sh`, `seed-local.sh`, `stop-local.sh`) são placeholders vazios. As mensagens de commit são escritas em português.
+Os scripts em `scripts/` estão implementados: `start-local.sh` / `stop-local.sh` sobem e derrubam a infra, `seed-local.sh` cadastra produtos no InventoryService, `e2e-saga.sh` / `e2e-saga-declined.sh` rodam a saga ponta a ponta com os serviços via `java -jar`, e `e2e-docker.sh` roda a saga inteira **nos containers** (`docker compose up -d --build` + os dois caminhos + fan-out do NotificationService + checagem de DLT; `E2E_KEEP=1` mantém o stack de pé no fim, `E2E_NO_BUILD=1` pula o build). As mensagens de commit são escritas em português.
 
 ## Comandos
 
@@ -33,6 +33,8 @@ Execute tudo de dentro do diretório do serviço, ex.: `cd services/OrderService
 | Um método de teste | `./mvnw test -Dtest=CreateOrderUseCaseTest#createsOrder` |
 | Subir o serviço | `./mvnw spring-boot:run` |
 
+Para subir a plataforma inteira em containers (a partir da raiz): `docker compose -f infrastructure/docker/docker-compose.yml up -d --build`. Rebuild de um serviço só: `docker compose -f infrastructure/docker/docker-compose.yml up -d --build order-service`.
+
 No Windows use `mvnw.cmd`. Os testes de integração (`*IT.java` / `*IntegrationTest.java`, que estendem `AbstractIntegrationTest`) sobem **Testcontainers** (Postgres + Kafka) e exigem um daemon Docker em execução. Os testes unitários são `*Test.java` e não dependem de nada externo.
 
 Para construir um módulo isolado a partir da raiz (compila antes só as libs de que ele precisa): `./mvnw -pl services/OrderService -am verify`.
@@ -43,9 +45,15 @@ CI **por módulo**: há um workflow fino por módulo em `.github/workflows/` (`o
 
 ### Infraestrutura local
 
-`docker compose -f infrastructure/docker/docker-compose.yml up -d` sobe Postgres (`localhost:5432`, usuário `postgres` / senha `root`), Zookeeper e Kafka (`localhost:9092`). O `init-databases.sql` do compose cria um banco por serviço (`orderservice`, `paymentservice`, `inventoryservice`, `notificationservice`). Os serviços rodam com `spring.jpa.hibernate.ddl-auto: validate` e dependem das migrações **Flyway** em `src/main/resources/db/migration` (que também varre `db/migration/platform/*` vindo no jar do `platform-messaging`).
+`docker compose -f infrastructure/docker/docker-compose.yml up -d --build` sobe a plataforma inteira: Postgres (`localhost:5432`, usuário `postgres` / senha `root`), Zookeeper, Kafka (`localhost:9092`) **e os quatro serviços implementados** (OrderService, InventoryService, PaymentService, NotificationService). Os serviços rodam com `spring.jpa.hibernate.ddl-auto: validate` e dependem das migrações **Flyway** em `src/main/resources/db/migration` (que também varre `db/migration/platform/*` vindo no jar do `platform-messaging`).
 
-Portas HTTP dos serviços: OrderService `8080` (padrão do Spring, não configurada), PaymentService `8082`, InventoryService `8083`, NotificationService `8084`. Actuator + métricas Prometheus ficam expostos em `/actuator/prometheus`.
+**Bancos por serviço.** O Postgres usa o volume nomeado `pgdata`. O `init-databases.sql` cria `orderservice`, `paymentservice`, `inventoryservice` e `notificationservice`, mas o hook `/docker-entrypoint-initdb.d` só roda quando o volume é criado do zero. Por isso existe o serviço `db-init` (roda o mesmo script, idempotente via `\gexec`, a cada `up`), do qual os quatro serviços dependem (`condition: service_completed_successfully`). Se ainda assim faltar algum banco (volume corrompido/antigo), rode `docker compose -f infrastructure/docker/docker-compose.yml down -v` e suba de novo.
+
+As imagens dos serviços são construídas pelo `infrastructure/docker/Dockerfile` genérico (build multi-stage: `maven:3.9-eclipse-temurin-17` roda `mvn -pl <MODULE> -am -DskipTests package` pelo reator do agregador; runtime em `eclipse-temurin:17-jre`). O contexto de build é a raiz do repositório e o módulo alvo vem do `build.args.MODULE` de cada serviço no compose. Dentro da rede do compose os serviços falam com o broker pelo listener interno `kafka:29092` e com o banco em `postgres:5432` (via `KAFKA_BOOTSTRAP_SERVERS` / `DB_URL`, que também têm default para execução fora do Docker apontando para `localhost`). O broker sobe com `KAFKA_AUTO_CREATE_TOPICS_ENABLE=false`: os beans `NewTopic` de cada `KafkaTopicsConfig` são a única fonte de criação de tópicos (sempre 3 partições), evitando a corrida em que o broker criaria o tópico com 1 partição antes do bean.
+
+Para rodar um serviço fora do container (pelo IDE ou `./mvnw spring-boot:run`), suba só a infra com `docker compose -f infrastructure/docker/docker-compose.yml up -d postgres kafka` e deixe os defaults `localhost` valerem.
+
+Portas HTTP dos serviços: OrderService `8081` (via `SERVER_PORT` no compose; fora do Docker o default do Spring é `8080`), PaymentService `8082`, InventoryService `8083`, NotificationService `8084`. Actuator + métricas Prometheus ficam expostos em `/actuator/prometheus`.
 
 ## Arquitetura
 

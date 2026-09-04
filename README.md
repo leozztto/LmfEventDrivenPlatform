@@ -300,5 +300,22 @@ LmfEventDrivenPlatform/
 cd services/OrderService && ./mvnw test
 ```
 
+### Rodar localmente com Docker
+
+```bash
+# Sobe tudo em containers (Postgres + Kafka + os 4 serviços implementados):
+docker compose -f infrastructure/docker/docker-compose.yml up -d --build
+
+# Portas: OrderService 8081, PaymentService 8082, InventoryService 8083, NotificationService 8084
+# Derruba tudo (com volumes):
+docker compose -f infrastructure/docker/docker-compose.yml down -v
+
+# E2E da saga rodando nos containers (aprovação + recusa/compensação + fan-out + DLT):
+./scripts/e2e-docker.sh
+```
+
+As imagens são construídas pelo `infrastructure/docker/Dockerfile` genérico (build multi-stage
+via reator Maven, parametrizado por `build.args.MODULE`).
+
 # Author
 Developed by Leandro Menegazzo Franceschetto.

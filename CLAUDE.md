@@ -13,13 +13,15 @@ Bibliotecas compartilhadas (`groupId` `com.lmf`, versão `0.0.1-SNAPSHOT`):
 - **`shared/contracts`** (`platform-contracts`) — contratos de evento (envelope + payloads da saga) compartilhados entre serviços.
 - **`shared/libraries/platform-messaging`** (`platform-messaging`) — Outbox/Inbox/DLT comuns (relay agendado, consumidor idempotente). Depende de `platform-contracts`.
 
-**OrderService**, **PaymentService**, **InventoryService** e **NotificationService** consomem essas libs hoje.
+**OrderService**, **PaymentService**, **InventoryService**, **NotificationService** e **FraudService** consomem essas libs hoje.
 
-Serviços implementados: **OrderService**, **InventoryService**, **PaymentService**, **NotificationService**. `AuditService`, `AuthService`, `FraudService` e `GatewayService` são esqueletos gerados (apenas a classe `*Application` + um teste de carga de contexto) — trate-os como ainda não construídos, e o CI deles só compila (`skip-tests: true`).
+Serviços implementados: **OrderService**, **InventoryService**, **PaymentService**, **NotificationService**, **FraudService**. `AuditService`, `AuthService` e `GatewayService` são esqueletos gerados (apenas a classe `*Application` + um teste de carga de contexto) — trate-os como ainda não construídos, e o CI deles só compila (`skip-tests: true`).
 
 O **NotificationService** é um consumidor puro (sem REST, sem produção de eventos): assina `order.created`, `payment.approved`, `payment.failed` e `inventory.reservation.failed` com `groupId=notification-service-group` (um segundo leitor desses tópicos, prova de fan-out da coreografia), guarda o contato do pedido em `notification_recipients` a partir do `order.created` e registra o histórico em `notifications`. O envio é um adapter fake (`ConsoleNotificationSender`, canal `LOG`); e-mail/SMS ficam para depois. Entrega é best-effort: falha vira registro `FAILED`, não retentativa de saga. Usa o Inbox do `platform-messaging` (não o Outbox).
 
-Os scripts em `scripts/` estão implementados: `start-local.sh` / `stop-local.sh` sobem e derrubam a infra, `seed-local.sh` cadastra produtos no InventoryService, `e2e-saga.sh` / `e2e-saga-declined.sh` rodam a saga ponta a ponta com os serviços via `java -jar`, e `e2e-docker.sh` roda a saga inteira **nos containers** (`docker compose up -d --build` + os dois caminhos + fan-out do NotificationService + checagem de DLT; `E2E_KEEP=1` mantém o stack de pé no fim, `E2E_NO_BUILD=1` pula o build). As mensagens de commit são escritas em português.
+O **FraudService** é o novo elo entre `OrderService` e `InventoryService` (ver `docs/adr/0001-fraud-coreografia-vs-orquestracao.md`): consome `order.created`, aplica as regras de fraude da v1 (limite de valor configurável via `fraud.rules.max-order-amount` + lista de bloqueio por `customerId`/e-mail), grava o histórico em `fraud_checks` e publica `fraud.approved` ou `fraud.rejected` via Outbox — o `InventoryService` passou a reagir a `fraud.approved` em vez de `order.created`, e o `OrderService` cancela o pedido (`FRAUD_REJECTED`) ao consumir `fraud.rejected`. Expõe `POST /api/v1/blocklist` e `DELETE /api/v1/blocklist/{id}` para administração simples da lista de bloqueio.
+
+Os scripts em `scripts/` estão implementados: `start-local.sh` / `stop-local.sh` sobem e derrubam a infra, `seed-local.sh` cadastra produtos no InventoryService, `e2e-saga.sh` / `e2e-saga-declined.sh` rodam a saga ponta a ponta com os serviços via `java -jar`, e `e2e-docker.sh` roda a saga inteira **nos containers** (`docker compose up -d --build` + os três caminhos — aprovado, recusado por pagamento e rejeitado por fraude — + fan-out do NotificationService + checagem de DLT; `E2E_KEEP=1` mantém o stack de pé no fim, `E2E_NO_BUILD=1` pula o build). As mensagens de commit são escritas em português.
 
 ## Comandos
 
@@ -45,15 +47,15 @@ CI **por módulo**: há um workflow fino por módulo em `.github/workflows/` (`o
 
 ### Infraestrutura local
 
-`docker compose -f infrastructure/docker/docker-compose.yml up -d --build` sobe a plataforma inteira: Postgres (`localhost:5432`, usuário `postgres` / senha `root`), Zookeeper, Kafka (`localhost:9092`) **e os quatro serviços implementados** (OrderService, InventoryService, PaymentService, NotificationService). Os serviços rodam com `spring.jpa.hibernate.ddl-auto: validate` e dependem das migrações **Flyway** em `src/main/resources/db/migration` (que também varre `db/migration/platform/*` vindo no jar do `platform-messaging`).
+`docker compose -f infrastructure/docker/docker-compose.yml up -d --build` sobe a plataforma inteira: Postgres (`localhost:5432`, usuário `postgres` / senha `root`), Zookeeper, Kafka (`localhost:9092`) **e os cinco serviços implementados** (OrderService, InventoryService, PaymentService, NotificationService, FraudService). Os serviços rodam com `spring.jpa.hibernate.ddl-auto: validate` e dependem das migrações **Flyway** em `src/main/resources/db/migration` (que também varre `db/migration/platform/*` vindo no jar do `platform-messaging`).
 
-**Bancos por serviço.** O Postgres usa o volume nomeado `pgdata`. O `init-databases.sql` cria `orderservice`, `paymentservice`, `inventoryservice` e `notificationservice`, mas o hook `/docker-entrypoint-initdb.d` só roda quando o volume é criado do zero. Por isso existe o serviço `db-init` (roda o mesmo script, idempotente via `\gexec`, a cada `up`), do qual os quatro serviços dependem (`condition: service_completed_successfully`). Se ainda assim faltar algum banco (volume corrompido/antigo), rode `docker compose -f infrastructure/docker/docker-compose.yml down -v` e suba de novo.
+**Bancos por serviço.** O Postgres usa o volume nomeado `pgdata`. O `init-databases.sql` cria `orderservice`, `paymentservice`, `inventoryservice`, `notificationservice` e `fraudservice`, mas o hook `/docker-entrypoint-initdb.d` só roda quando o volume é criado do zero. Por isso existe o serviço `db-init` (roda o mesmo script, idempotente via `\gexec`, a cada `up`), do qual os cinco serviços dependem (`condition: service_completed_successfully`). Se ainda assim faltar algum banco (volume corrompido/antigo), rode `docker compose -f infrastructure/docker/docker-compose.yml down -v` e suba de novo.
 
 As imagens dos serviços são construídas pelo `infrastructure/docker/Dockerfile` genérico (build multi-stage: `maven:3.9-eclipse-temurin-17` roda `mvn -pl <MODULE> -am -DskipTests package` pelo reator do agregador; runtime em `eclipse-temurin:17-jre`). O contexto de build é a raiz do repositório e o módulo alvo vem do `build.args.MODULE` de cada serviço no compose. Dentro da rede do compose os serviços falam com o broker pelo listener interno `kafka:29092` e com o banco em `postgres:5432` (via `KAFKA_BOOTSTRAP_SERVERS` / `DB_URL`, que também têm default para execução fora do Docker apontando para `localhost`). O broker sobe com `KAFKA_AUTO_CREATE_TOPICS_ENABLE=false`: os beans `NewTopic` de cada `KafkaTopicsConfig` são a única fonte de criação de tópicos (sempre 3 partições), evitando a corrida em que o broker criaria o tópico com 1 partição antes do bean.
 
 Para rodar um serviço fora do container (pelo IDE ou `./mvnw spring-boot:run`), suba só a infra com `docker compose -f infrastructure/docker/docker-compose.yml up -d postgres kafka` e deixe os defaults `localhost` valerem.
 
-Portas HTTP dos serviços: OrderService `8081` (via `SERVER_PORT` no compose; fora do Docker o default do Spring é `8080`), PaymentService `8082`, InventoryService `8083`, NotificationService `8084`. Actuator + métricas Prometheus ficam expostos em `/actuator/prometheus`.
+Portas HTTP dos serviços: OrderService `8081` (via `SERVER_PORT` no compose; fora do Docker o default do Spring é `8080`), PaymentService `8082`, InventoryService `8083`, NotificationService `8084`, FraudService `8085`. Actuator + métricas Prometheus ficam expostos em `/actuator/prometheus`.
 
 ## Arquitetura
 
@@ -72,14 +74,14 @@ Uma interface `XRepository` de domínio é implementada por `infrastructure.pers
 A comunicação entre serviços é assíncrona via Kafka. Cadeia atual:
 
 ```
-OrderService --(order.created)--> InventoryService --(inventory.reserved)--> PaymentService
-      ^                                   |                                        |
-      |          (inventory.reservation.failed / payment.approved / payment.failed)
-      +-----------------------------------+----------------------------------------+
+OrderService --(order.created)--> FraudService --(fraud.approved)--> InventoryService --(inventory.reserved)--> PaymentService
+      ^                                 |                                    |                                        |
+      |                     (fraud.rejected)   (inventory.reservation.failed / payment.approved / payment.failed)
+      +---------------------------------+------------------------------------+----------------------------------------+
                          (OrderService fecha a saga; NotificationService só notifica)
 ```
 
-Tópicos: `order.created`, `inventory.reserved`, `inventory.reservation.failed`, `payment.approved`, `payment.failed` (mais a DLT `<topic>.dlt` de cada um). Os group ids dos consumidores seguem `<service>-service-group`; um mesmo tópico pode ter vários group ids (ex.: `payment.approved` é lido por `order-`, `inventory-` e `notification-service-group`).
+Tópicos: `order.created`, `fraud.approved`, `fraud.rejected`, `inventory.reserved`, `inventory.reservation.failed`, `payment.approved`, `payment.failed` (mais a DLT `<topic>.dlt` de cada um). Os group ids dos consumidores seguem `<service>-service-group`; um mesmo tópico pode ter vários group ids (ex.: `payment.approved` é lido por `order-`, `inventory-` e `notification-service-group`).
 
 **Transactional Outbox (produtores).** Um use case persiste sua alteração de domínio e uma `OutboxEventEntity` com status `PENDING` no *mesmo* método `@Transactional` (ver `CreateOrderUseCase`). Um poller `@Scheduled` (`OutboxProcessor` / `OutboxEventProcessor`) busca `findTop100ByOutboxStatusOrderByCreatedAtAsc(PENDING)`, publica no Kafka e marca como `PUBLISHED`. Em caso de falha marca `FAILED` e então `markAsPendingRetry()` (volta para `PENDING`) ou, esgotadas as tentativas, transiciona para `DLT` e emite um `DltEvent` no tópico `*.dlt`. Novos eventos de saída devem passar por essa tabela — nunca publique no Kafka diretamente de um use case.
 

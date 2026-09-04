@@ -183,6 +183,28 @@ class OrderTest {
         assertThrows(InvalidOrderStatusException.class, order::rejectPayment);
     }
 
+    @Test
+    @DisplayName("Should reject for fraud successfully")
+    void shouldRejectForFraudSuccessfully() {
+
+        Order order = createOrder(List.of(createItem(1, 100)));
+
+        order.rejectForFraud();
+
+        assertEquals(OrderStatus.FRAUD_REJECTED, order.getOrderStatus());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when fraud rejection transition is invalid")
+    void shouldThrowExceptionWhenFraudRejectionTransitionIsInvalid() {
+
+        Order order = createOrder(List.of(createItem(1, 100)));
+
+        order.rejectForFraud();
+
+        assertThrows(InvalidOrderStatusException.class, order::rejectForFraud);
+    }
+
     private Order createOrder(List<OrderItem> items) {
 
         return new Order(createCustomerInfo(), createShippingAddress(), createPaymentInfo(), items);

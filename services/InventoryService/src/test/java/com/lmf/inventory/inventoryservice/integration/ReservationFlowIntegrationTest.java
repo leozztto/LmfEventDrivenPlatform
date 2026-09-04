@@ -8,7 +8,7 @@ import com.lmf.inventory.inventoryservice.domain.repository.ProductRepository;
 import com.lmf.inventory.inventoryservice.domain.repository.StockReservationRepository;
 import com.lmf.inventory.inventoryservice.infrastructure.persistence.repository.SpringDataProductRepository;
 import com.lmf.inventory.inventoryservice.infrastructure.persistence.repository.SpringDataStockReservationRepository;
-import com.lmf.platform.contracts.OrderCreatedEvent;
+import com.lmf.platform.contracts.FraudApprovedEvent;
 import com.lmf.platform.contracts.OrderItem;
 import com.lmf.platform.messaging.OutboxEvent;
 import com.lmf.platform.messaging.OutboxEventRepository;
@@ -61,8 +61,8 @@ class ReservationFlowIntegrationTest extends AbstractIntegrationTest {
 
         UUID orderId = UUID.randomUUID();
 
-        OrderCreatedEvent event = new OrderCreatedEvent(UUID.randomUUID(), OrderCreatedEvent.TYPE, "v1", OffsetDateTime.now(),
-                orderId, "PENDING_PAYMENT", BigDecimal.valueOf(150), null, null, null,
+        FraudApprovedEvent event = new FraudApprovedEvent(UUID.randomUUID(), FraudApprovedEvent.TYPE, "v1", OffsetDateTime.now(),
+                orderId, null, BigDecimal.valueOf(150), null,
                 List.of(new OrderItem(product.getId(), 3, BigDecimal.valueOf(50), BigDecimal.valueOf(150))));
 
         reserveInventoryUseCase.execute(event);
@@ -98,8 +98,8 @@ class ReservationFlowIntegrationTest extends AbstractIntegrationTest {
 
         UUID orderId = UUID.randomUUID();
 
-        OrderCreatedEvent event = new OrderCreatedEvent(UUID.randomUUID(), OrderCreatedEvent.TYPE, "v1", OffsetDateTime.now(),
-                orderId, "PENDING_PAYMENT", BigDecimal.valueOf(500), null, null, null,
+        FraudApprovedEvent event = new FraudApprovedEvent(UUID.randomUUID(), FraudApprovedEvent.TYPE, "v1", OffsetDateTime.now(),
+                orderId, null, BigDecimal.valueOf(500), null,
                 List.of(new OrderItem(product.getId(), 5, BigDecimal.valueOf(100), BigDecimal.valueOf(500))));
 
         reserveInventoryUseCase.execute(event);

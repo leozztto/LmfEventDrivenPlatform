@@ -1,13 +1,11 @@
 package com.lmf.fraud.fraudservice;
 
+import com.lmf.fraud.fraudservice.integration.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class FraudServiceApplicationTests {
+class FraudServiceApplicationTests extends AbstractIntegrationTest {
 
     @Test
     void contextLoads() {
     }
-
 }

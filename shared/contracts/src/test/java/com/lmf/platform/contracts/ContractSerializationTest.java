@@ -85,4 +85,26 @@ class ContractSerializationTest {
 
         assertThat(objectMapper.readValue(objectMapper.writeValueAsString(failed), PaymentFailedEvent.class)).isEqualTo(failed);
     }
+
+    @Test
+    @DisplayName("Eventos de fraude fazem round-trip")
+    void fraudEventsRoundTrip() throws Exception {
+
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MILLIS);
+
+        FraudApprovedEvent approved = new FraudApprovedEvent(
+                UUID.randomUUID(), FraudApprovedEvent.TYPE, "v1", now,
+                UUID.randomUUID(),
+                new CustomerInfo(UUID.randomUUID(), "Ana", "ana@example.com", "11999999999"),
+                new BigDecimal("250.00"),
+                new PaymentInfo(PaymentMethod.PIX, 1, new BigDecimal("250.00")),
+                List.of(new OrderItem(UUID.randomUUID(), 2, new BigDecimal("125.00"), new BigDecimal("250.00"))));
+
+        assertThat(objectMapper.readValue(objectMapper.writeValueAsString(approved), FraudApprovedEvent.class)).isEqualTo(approved);
+
+        FraudRejectedEvent rejected = new FraudRejectedEvent(UUID.randomUUID(), FraudRejectedEvent.TYPE, "v1", now,
+                UUID.randomUUID(), "Order amount exceeds limit");
+
+        assertThat(objectMapper.readValue(objectMapper.writeValueAsString(rejected), FraudRejectedEvent.class)).isEqualTo(rejected);
+    }
 }

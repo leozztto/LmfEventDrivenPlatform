@@ -1,0 +1,12 @@
+# Perfil de teste de integração.
+spring:
+  kafka:
+    # Os @KafkaListener não sobem sozinhos: os testes que não usam Kafka rodam só com Postgres;
+    # o teste de round-trip real inicia o registry manualmente.
+    listener:
+      auto-startup: false
+
+# Declaração de tópicos desligada — o teste de round-trip usa auto-create do broker.
+platform:
+  kafka:
+    declare-topics: false

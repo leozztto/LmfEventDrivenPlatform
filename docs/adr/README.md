@@ -10,3 +10,4 @@ só o resultado final. Formato: Status / Contexto / Decisão / Consequências.
 | [0003](0003-inbox-vs-idempotencia-por-estado.md) | Inbox Pattern nos consumidores da coreografia, exceto no fechamento da saga em OrderService |
 | [0004](0004-compensacao-reserva-estoque.md) | Compensação assíncrona da reserva de estoque em vez de commit distribuído |
 | [0005](0005-idempotencia-http-idempotency-key.md) | Idempotência HTTP via `Idempotency-Key`, separada da idempotência de consumidor Kafka |
+| [0006](0006-audit-event-sink.md) | AuditService: sink de auditoria append-only, consumo tipado, sem Outbox |

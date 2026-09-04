@@ -16,3 +16,6 @@ SELECT 'CREATE DATABASE notificationservice'
 
 SELECT 'CREATE DATABASE fraudservice'
  WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'fraudservice')\gexec
+
+SELECT 'CREATE DATABASE auditservice'
+ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'auditservice')\gexec

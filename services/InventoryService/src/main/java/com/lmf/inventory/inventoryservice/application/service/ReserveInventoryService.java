@@ -7,9 +7,9 @@ import com.lmf.inventory.inventoryservice.domain.model.Product;
 import com.lmf.inventory.inventoryservice.domain.model.StockReservation;
 import com.lmf.inventory.inventoryservice.domain.repository.ProductRepository;
 import com.lmf.inventory.inventoryservice.domain.repository.StockReservationRepository;
+import com.lmf.platform.contracts.FraudApprovedEvent;
 import com.lmf.platform.contracts.InventoryReservationFailedEvent;
 import com.lmf.platform.contracts.InventoryReservedEvent;
-import com.lmf.platform.contracts.OrderCreatedEvent;
 import com.lmf.platform.contracts.OrderItem;
 import com.lmf.platform.contracts.ReservedItem;
 import lombok.RequiredArgsConstructor;
@@ -45,13 +45,13 @@ public class ReserveInventoryService implements ReserveInventoryUseCase {
      */
     @Override
     @Transactional
-    public void execute(OrderCreatedEvent orderCreatedEvent) {
+    public void execute(FraudApprovedEvent fraudApprovedEvent) {
 
         Map<UUID, Product> productsById = new LinkedHashMap<>();
 
         try {
 
-            for (OrderItem orderItem : orderCreatedEvent.items()) {
+            for (OrderItem orderItem : fraudApprovedEvent.items()) {
 
                 Product product = productsById.computeIfAbsent(orderItem.productId(), id ->
                         productRepository.findById(id).orElseThrow(() -> new ProductNotFoundException(id)));
@@ -61,9 +61,9 @@ public class ReserveInventoryService implements ReserveInventoryUseCase {
 
         } catch (ProductNotFoundException | InsufficientStockException businessFailure) {
 
-            log.warn("Inventory reservation failed. orderId={}, reason={}", orderCreatedEvent.orderId(), businessFailure.getMessage());
+            log.warn("Inventory reservation failed. orderId={}, reason={}", fraudApprovedEvent.orderId(), businessFailure.getMessage());
 
-            reserveInventoryEventService.publishFailure(toFailedEvent(orderCreatedEvent, businessFailure.getMessage()));
+            reserveInventoryEventService.publishFailure(toFailedEvent(fraudApprovedEvent, businessFailure.getMessage()));
 
             return;
         }
@@ -72,47 +72,47 @@ public class ReserveInventoryService implements ReserveInventoryUseCase {
 
         Map<UUID, Integer> quantityByProduct = new LinkedHashMap<>();
 
-        for (OrderItem orderItem : orderCreatedEvent.items()) {
+        for (OrderItem orderItem : fraudApprovedEvent.items()) {
 
             quantityByProduct.merge(orderItem.productId(), orderItem.quantity(), Integer::sum);
         }
 
         quantityByProduct.forEach((productId, quantity) ->
-                stockReservationRepository.save(StockReservation.create(orderCreatedEvent.orderId(), productId, quantity)));
+                stockReservationRepository.save(StockReservation.create(fraudApprovedEvent.orderId(), productId, quantity)));
 
         List<ReservedItem> reservedItems = quantityByProduct.entrySet().stream()
                 .map(entry -> new ReservedItem(entry.getKey(), entry.getValue()))
                 .toList();
 
-        reserveInventoryEventService.publishSuccess(toReservedEvent(orderCreatedEvent, reservedItems));
+        reserveInventoryEventService.publishSuccess(toReservedEvent(fraudApprovedEvent, reservedItems));
 
-        log.info("Inventory reserved. orderId={}, items={}", orderCreatedEvent.orderId(), reservedItems.size());
+        log.info("Inventory reserved. orderId={}, items={}", fraudApprovedEvent.orderId(), reservedItems.size());
     }
 
-    private InventoryReservedEvent toReservedEvent(OrderCreatedEvent orderCreatedEvent, List<ReservedItem> reservedItems) {
+    private InventoryReservedEvent toReservedEvent(FraudApprovedEvent fraudApprovedEvent, List<ReservedItem> reservedItems) {
 
-        UUID customerId = orderCreatedEvent.customer() != null ? orderCreatedEvent.customer().customerId() : null;
+        UUID customerId = fraudApprovedEvent.customer() != null ? fraudApprovedEvent.customer().customerId() : null;
 
         return new InventoryReservedEvent(
                 UUID.randomUUID(),
                 InventoryReservedEvent.TYPE,
                 EVENT_VERSION,
                 OffsetDateTime.now(),
-                orderCreatedEvent.orderId(),
+                fraudApprovedEvent.orderId(),
                 customerId,
-                orderCreatedEvent.totalAmount(),
-                orderCreatedEvent.payment(),
+                fraudApprovedEvent.totalAmount(),
+                fraudApprovedEvent.payment(),
                 reservedItems);
     }
 
-    private InventoryReservationFailedEvent toFailedEvent(OrderCreatedEvent orderCreatedEvent, String reason) {
+    private InventoryReservationFailedEvent toFailedEvent(FraudApprovedEvent fraudApprovedEvent, String reason) {
 
         return new InventoryReservationFailedEvent(
                 UUID.randomUUID(),
                 InventoryReservationFailedEvent.TYPE,
                 EVENT_VERSION,
                 OffsetDateTime.now(),
-                orderCreatedEvent.orderId(),
+                fraudApprovedEvent.orderId(),
                 reason);
     }
 }

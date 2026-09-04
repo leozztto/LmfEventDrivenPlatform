@@ -44,6 +44,12 @@ public class UpdateOrderStatusUseCase {
         applyTransition(orderId, "inventory reservation failed", Order::cancel);
     }
 
+    @Transactional
+    public void rejectForFraud(UUID orderId) {
+
+        applyTransition(orderId, "fraud rejected", Order::rejectForFraud);
+    }
+
     private void applyTransition(UUID orderId, String reason, Consumer<Order> transition) {
 
         Order order = orderRepository.findById(orderId).orElseThrow(() -> new OrderNotFoundException(orderId));

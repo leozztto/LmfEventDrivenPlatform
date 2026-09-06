@@ -28,7 +28,7 @@
 	</scm>
 	<properties>
 		<java.version>17</java.version>
-		<spring-cloud.version>2025.0.2</spring-cloud.version>
+		<mockito.version>5.18.0</mockito.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -41,11 +41,7 @@
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-mail</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-oauth2-authorization-server</artifactId>
+			<artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -60,22 +56,22 @@
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.springframework.cloud</groupId>
-			<artifactId>spring-cloud-starter-circuitbreaker-resilience4j</artifactId>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-core</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.springframework.cloud</groupId>
-			<artifactId>spring-cloud-starter-gateway-server-webmvc</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.kafka</groupId>
-			<artifactId>spring-kafka</artifactId>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-database-postgresql</artifactId>
 		</dependency>
 
 		<dependency>
 			<groupId>io.micrometer</groupId>
 			<artifactId>micrometer-registry-prometheus</artifactId>
 			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-tracing-bridge-brave</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.postgresql</groupId>
@@ -88,13 +84,14 @@
 			<optional>true</optional>
 		</dependency>
 		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>2.8.9</version>
+		</dependency>
+
+		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.kafka</groupId>
-			<artifactId>spring-kafka-test</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
@@ -102,18 +99,27 @@
 			<artifactId>spring-security-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>postgresql</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-core</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.assertj</groupId>
+			<artifactId>assertj-core</artifactId>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
-	<dependencyManagement>
-		<dependencies>
-			<dependency>
-				<groupId>org.springframework.cloud</groupId>
-				<artifactId>spring-cloud-dependencies</artifactId>
-				<version>${spring-cloud.version}</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency>
-		</dependencies>
-	</dependencyManagement>
 
 	<build>
 		<plugins>
@@ -162,6 +168,36 @@
 								</path>
 							</annotationProcessorPaths>
 						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<excludes>
+						<exclude>**/integration/**</exclude>
+						<exclude>**/*IT.java</exclude>
+						<exclude>**/*ApplicationTests.java</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<configuration>
+					<includes>
+						<include>**/integration/**/*.java</include>
+						<include>**/*IT.java</include>
+						<include>**/*ApplicationTests.java</include>
+					</includes>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>integration-test</goal>
+							<goal>verify</goal>
+						</goals>
 					</execution>
 				</executions>
 			</plugin>

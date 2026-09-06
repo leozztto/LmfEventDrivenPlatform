@@ -194,6 +194,35 @@ Payment Service --> payment.approved | payment.failed
 
 ## Gateway Service
 
+Ponto único de entrada da plataforma, construído com **Spring Cloud Gateway (WebMVC)** — servlet, para
+manter a coerência com o stack MVC/JPA do resto dos serviços. É REST-only e fica fora do tema
+event-driven (sem Kafka, sem banco).
+
+### Features
+
+- Roteamento declarativo em `application.yaml` (`spring.cloud.gateway.server.webmvc.routes`) para os
+  serviços com REST — `/api/v1/orders/**` → OrderService, `/api/v1/products/**` → InventoryService,
+  `/api/v1/blocklist/**` → FraudService, `/api/v1/audit-events/**` → AuditService — mais
+  `/api/v1/auth/**` e `/oauth2/jwks` → AuthService. As URIs vêm de variáveis de ambiente
+  (`ORDER_SERVICE_URL`, …) com default `localhost`.
+- **Validação de JWT na borda** como OAuth2 Resource Server: a chave pública vem do JWKS do AuthService
+  (`spring.security.oauth2.resourceserver.jwt.jwk-set-uri`). O claim `roles` vira authorities;
+  `/api/v1/blocklist/**` e `/api/v1/audit-events/**` exigem `ROLE_ADMIN`, o restante exige apenas um
+  token válido; `/api/v1/auth/**`, `/oauth2/jwks`, `/actuator/**` e o Swagger são públicos.
+- **Rate limiting** com Resilience4j `RateLimiter` num `OncePerRequestFilter` global (o gateway WebMVC
+  não tem filtro de rate limit Resilience4j nativo). Chave = `sub` do JWT ou IP de origem; resposta
+  `429` ao exceder `gateway.ratelimit.{limit-for-period,refresh-period,timeout}`.
+- **Agregação de OpenAPI**: `http://localhost:8088/swagger-ui.html` com um seletor por serviço
+  (`springdoc.swagger-ui.urls` + rotas `/aggregate/{service}/v3/api-docs`). Hoje cobre OrderService e
+  InventoryService (os únicos com `springdoc`).
+- 401/403 devolvidos com corpo `ErrorResponse` JSON; observabilidade com `correlationId`/`traceId` +
+  métricas Prometheus.
+- Porta HTTP `8088`.
+- Testes unitários e de integração (roteamento + autorização + rate limit contra um WireMock in-JVM;
+  não precisa de Docker).
+
+Ver `docs/adr/0008-gateway-borda-jwt-webmvc-ratelimit-openapi.md`.
+
 ---
 
 ## Fraud Service
@@ -201,6 +230,27 @@ Payment Service --> payment.approved | payment.failed
 ---
 
 ## Auth Service
+
+Microsserviço de identidade construído com DDD + Clean Architecture. Faz cadastro/login de usuários
+com papéis e emite um **access token JWT RS256**. É REST-only e fica fora do tema event-driven.
+
+### Features
+
+- Endpoints REST próprios (sem fluxos OAuth2): `POST /api/v1/auth/register`, `POST /api/v1/auth/login`
+  (devolve `{accessToken, tokenType, expiresIn}`) e `GET /api/v1/auth/me` (perfil do token).
+- JWT assinado com **RS256** via `NimbusJwtEncoder`; claims `sub`, `roles`, `email`, `iss`, `iat`,
+  `exp`, `jti`; TTL configurável em `auth.jwt.ttl` (default `PT1H`).
+- Par RSA **gerado no startup** (ou fornecido via `auth.jwt.public-key`/`private-key`); a chave pública
+  é publicada em `GET /oauth2/jwks` (RFC 7517) para o Gateway validar tokens localmente.
+- Usuários e papéis em PostgreSQL (banco `authservice`, migrações Flyway); senha com **BCrypt**;
+  `Role` é enum (`ROLE_USER`, `ROLE_ADMIN`) numa tabela `user_roles`.
+- Migração `V2__seed_admin_user.sql` cria um usuário `admin` / `admin123` com `ROLE_ADMIN` para o
+  ambiente local / e2e.
+- Observabilidade com `correlationId`/`traceId` + métricas Prometheus em `/actuator/prometheus`.
+- Porta HTTP `8087`.
+- Testes unitários e de integração (fluxo register → login → `/me` contra Testcontainers Postgres).
+
+Ver `docs/adr/0007-authservice-jwt-stateless-rsa-jwks.md`.
 
 ---
 
@@ -334,17 +384,20 @@ cd services/OrderService && ./mvnw test
 ### Rodar localmente com Docker
 
 ```bash
-# Sobe tudo em containers (Postgres + Kafka + os 6 serviços implementados):
+# Sobe tudo em containers (Postgres + Kafka + os 8 serviços implementados):
 docker compose -f infrastructure/docker/docker-compose.yml up -d --build
 
 # Portas: OrderService 8081, PaymentService 8082, InventoryService 8083, NotificationService 8084,
-# FraudService 8085, AuditService 8086
+# FraudService 8085, AuditService 8086, AuthService 8087, GatewayService 8088
 # Derruba tudo (com volumes):
 docker compose -f infrastructure/docker/docker-compose.yml down -v
 
 # E2E da saga rodando nos containers (aprovação + recusa/compensação + rejeição por fraude +
 # fan-out + trilha de auditoria + DLT):
 ./scripts/e2e-docker.sh
+
+# E2E da borda (register/login via Gateway + roteamento com/sem Bearer + gate de ROLE_ADMIN):
+./scripts/e2e-auth-gateway.sh
 ```
 
 As imagens são construídas pelo `infrastructure/docker/Dockerfile` genérico (build multi-stage

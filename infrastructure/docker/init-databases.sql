@@ -19,3 +19,6 @@ SELECT 'CREATE DATABASE fraudservice'
 
 SELECT 'CREATE DATABASE auditservice'
  WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'auditservice')\gexec
+
+SELECT 'CREATE DATABASE authservice'
+ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'authservice')\gexec

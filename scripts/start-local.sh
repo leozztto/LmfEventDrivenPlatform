@@ -10,4 +10,4 @@ echo "Aguardando Postgres e Kafka ficarem prontos..."
 docker compose -f "$COMPOSE_FILE" exec -T postgres bash -c 'until pg_isready -U postgres; do sleep 1; done'
 until docker compose -f "$COMPOSE_FILE" exec -T kafka kafka-topics --bootstrap-server localhost:9092 --list >/dev/null 2>&1; do sleep 1; done
 
-echo "Infra pronta. Bancos: orderservice, paymentservice, inventoryservice, notificationservice, fraudservice, auditservice. Kafka: localhost:9092"
+echo "Infra pronta. Bancos: orderservice, paymentservice, inventoryservice, notificationservice, fraudservice, auditservice, authservice. Kafka: localhost:9092"

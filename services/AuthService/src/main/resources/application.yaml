@@ -1,3 +1,61 @@
 spring:
   application:
     name: auth-service
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/authservice}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: false
+
+auth:
+  jwt:
+    issuer: ${AUTH_JWT_ISSUER:http://localhost:8087}
+    ttl: ${AUTH_JWT_TTL:PT1H}
+    # public-key / private-key: opcionais (base64 do DER, PKCS#8/X.509). Ausentes => par RSA efêmero
+    # gerado no startup.
+    public-key: ${AUTH_JWT_PUBLIC_KEY:}
+    private-key: ${AUTH_JWT_PRIVATE_KEY:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+
+info:
+  app:
+    name: auth-service
+    version: 1.0.0
+    environment: local
+
+server:
+  port: 8087
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},traceId=%X{traceId:-},spanId=%X{spanId:-}]"
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{traceId:-},%X{spanId:-}] correlationId=%X{correlationId:-} %logger{36} - %msg%n"

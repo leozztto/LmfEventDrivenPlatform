@@ -1,13 +1,11 @@
 package com.lmf.gateway.gatewayservice;
 
+import com.lmf.gateway.gatewayservice.integration.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class GatewayServiceApplicationTests {
+class GatewayServiceApplicationTests extends AbstractIntegrationTest {
 
     @Test
     void contextLoads() {
     }
-
 }

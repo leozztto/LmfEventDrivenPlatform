@@ -7,11 +7,14 @@ x-service-base: &service-base
       condition: service_completed_successfully
     kafka:
       condition: service_healthy
+    jaeger:
+      condition: service_started
 
 x-service-env: &service-env
   DB_USERNAME: postgres
   DB_PASSWORD: root
   KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+  OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
 
 services:
 
@@ -80,6 +83,17 @@ services:
       interval: 5s
       timeout: 5s
       retries: 15
+
+  # Backend de tracing distribuído: recebe spans via OTLP HTTP (porta 4318, é o exporter nativo do
+  # Spring Boot Actuator) e expõe a UI de busca de traces na 16686.
+  jaeger:
+    image: jaegertracing/all-in-one:1.60
+    container_name: event-driven-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"
+      - "4318:4318"
 
   order-service:
     <<: *service-base
@@ -213,6 +227,8 @@ services:
     depends_on:
       db-init:
         condition: service_completed_successfully
+      jaeger:
+        condition: service_started
     build:
       context: ../..
       dockerfile: infrastructure/docker/Dockerfile
@@ -224,6 +240,7 @@ services:
       DB_URL: jdbc:postgresql://postgres:5432/authservice
       SERVER_PORT: 8087
       AUTH_JWT_ISSUER: http://auth-service:8087
+      OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
     ports:
       - "8087:8087"
     healthcheck:
@@ -239,6 +256,8 @@ services:
     depends_on:
       auth-service:
         condition: service_healthy
+      jaeger:
+        condition: service_started
     build:
       context: ../..
       dockerfile: infrastructure/docker/Dockerfile
@@ -253,6 +272,7 @@ services:
       INVENTORY_SERVICE_URL: http://inventory-service:8083
       FRAUD_SERVICE_URL: http://fraud-service:8085
       AUDIT_SERVICE_URL: http://audit-service:8086
+      OTLP_TRACING_ENDPOINT: http://jaeger:4318/v1/traces
     ports:
       - "8088:8088"
     healthcheck:

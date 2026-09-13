@@ -227,6 +227,50 @@ Ver `docs/adr/0008-gateway-borda-jwt-webmvc-ratelimit-openapi.md`.
 
 ## Fraud Service
 
+Microsserviço de prevenção a fraude construído com Domain-Driven Design (DDD), Event-Driven
+Architecture e Clean Architecture com Spring Boot. É o novo elo da coreografia entre
+`OrderService` e `InventoryService` (ver `docs/adr/0001-fraud-coreografia-vs-orquestracao.md`).
+
+### Features
+
+- Consome `order.created` (`groupId=fraud-service-group`) e aplica as regras de fraude da v1:
+  limite de valor configurável (`fraud.rules.max-order-amount`, default `5000.00`) e lista de
+  bloqueio por `customerId`/e-mail
+- Grava o histórico de cada avaliação em `fraud_checks` (aprovado/reprovado + motivo)
+- Publica `fraud.approved` ou `fraud.rejected` via Transactional Outbox — o `InventoryService`
+  passou a reagir a `fraud.approved` (em vez de `order.created`), e o `OrderService` cancela o
+  pedido (`FRAUD_REJECTED`) ao consumir `fraud.rejected`
+- Administração da lista de bloqueio: `POST /api/v1/blocklist` (customerId/e-mail + motivo) e
+  `DELETE /api/v1/blocklist/{id}`
+- Consumo idempotente via **Inbox** e publicação via **Outbox** da biblioteca comum
+  `com.lmf:platform-messaging`; contratos de evento compartilhados em `com.lmf:platform-contracts`
+- Retry com backoff exponencial + Dead Letter Topic (`fraud.outbox.dlt` na publicação; DLT
+  dinâmica por tópico consumido)
+- Persistência PostgreSQL (banco `fraudservice`) com migrações Flyway, incluindo seed inicial da
+  blocklist
+- Observabilidade: logs estruturados com `correlationId`/`traceId` + métricas Prometheus em
+  `/actuator/prometheus`
+- Porta HTTP `8085`
+- Testes unitários, de integração (Testcontainers: Postgres + Kafka) e E2E
+  (`scripts/e2e-saga-declined.sh`)
+
+### Event Flow
+
+```text
+OrderService
+      |
+      v
+order.created  (tópico order.created)
+      |
+      v
+FraudService
+      |
+      +--> avalia valor máximo + blocklist
+      |
+      +--> fraud.approved  --> InventoryService reserva estoque
+      +--> fraud.rejected  --> OrderService cancela o pedido (FRAUD_REJECTED)
+```
+
 ---
 
 ## Auth Service
@@ -358,7 +402,9 @@ LmfEventDrivenPlatform/
 │   └── PaymentService/
 │
 ├── shared/
-│   └── contracts/           # com.lmf:platform-contracts — contratos de evento da saga
+│   ├── contracts/           # com.lmf:platform-contracts — contratos de evento da saga
+│   └── libraries/
+│       └── platform-messaging/  # com.lmf:platform-messaging — Outbox/Inbox/DLT comuns
 │
 ├── infrastructure/
 │   ├── docker/
@@ -373,11 +419,15 @@ LmfEventDrivenPlatform/
 ### Build
 
 ```bash
-# Builda os contratos compartilhados e os serviços na ordem correta:
+# Builda todos os módulos (libs compartilhadas + serviços) na ordem correta do reator:
 ./mvnw install
 
-# Para buildar um serviço isoladamente, os contratos precisam estar no repositório local antes:
-./mvnw -pl shared/contracts install
+# Builda/testa um serviço isoladamente a partir da raiz (compila antes só as libs de que ele
+# precisa, ex.: platform-contracts e platform-messaging):
+./mvnw -pl services/OrderService -am verify
+
+# Ou de dentro do próprio serviço, usando seu Maven Wrapper (as libs já precisam estar
+# instaladas no repositório local, ex.: via `./mvnw install` na raiz):
 cd services/OrderService && ./mvnw test
 ```
 

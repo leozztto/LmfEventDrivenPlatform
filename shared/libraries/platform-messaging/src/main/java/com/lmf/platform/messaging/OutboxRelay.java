@@ -2,6 +2,9 @@ package com.lmf.platform.messaging;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.Tracer;
+import io.micrometer.tracing.propagation.Propagator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Limit;
@@ -9,15 +12,23 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Relay do Transactional Outbox: lê as linhas {@code PENDING}, publica no tópico resolvido pelo
  * {@link OutboxTopicRouter} e transiciona o estado. Esgotadas as retentativas, o evento vai para a
  * DLT ({@code platform.outbox.dlt-topic}).
+ * <p>
+ * Quando a linha carrega um {@code traceParent} (gravado pelo {@link OutboxWriter} no momento da
+ * transação de negócio), o publish roda dentro de um span filho desse trace — a instrumentação
+ * Observation do {@code KafkaTemplate} (já ligada via {@code spring.kafka.template.observation-enabled})
+ * então injeta esse contexto como header no {@code ProducerRecord} automaticamente.
  */
 @Slf4j
 @RequiredArgsConstructor
 public class OutboxRelay {
+
+    private static final String TRACEPARENT_HEADER = "traceparent";
 
     private final OutboxEventRepository outboxEventRepository;
 
@@ -28,6 +39,10 @@ public class OutboxRelay {
     private final ObjectMapper objectMapper;
 
     private final String dltTopic;
+
+    private final Tracer tracer;
+
+    private final Propagator propagator;
 
     @Scheduled(fixedDelayString = "${platform.outbox.poll-interval-ms:5000}")
     @Transactional
@@ -55,7 +70,7 @@ public class OutboxRelay {
             event.markProcessing();
             outboxEventRepository.saveAndFlush(event);
 
-            messagePublisher.publish(topic, event.getAggregateId().toString(), event.getPayload());
+            publishWithTraceContext(event, topic);
 
             event.markPublished();
             outboxEventRepository.saveAndFlush(event);
@@ -79,6 +94,23 @@ public class OutboxRelay {
                 event.markPendingRetry();
                 outboxEventRepository.saveAndFlush(event);
             }
+        }
+    }
+
+    private void publishWithTraceContext(OutboxEvent event, String topic) {
+
+        if (event.getTraceParent() == null) {
+            messagePublisher.publish(topic, event.getAggregateId().toString(), event.getPayload());
+            return;
+        }
+
+        Map<String, String> carrier = Map.of(TRACEPARENT_HEADER, event.getTraceParent());
+        Span span = propagator.extract(carrier, Map::get).name("outbox-relay").start();
+
+        try (Tracer.SpanInScope ignored = tracer.withSpan(span)) {
+            messagePublisher.publish(topic, event.getAggregateId().toString(), event.getPayload());
+        } finally {
+            span.end();
         }
     }
 

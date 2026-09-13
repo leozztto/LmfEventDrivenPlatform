@@ -48,7 +48,10 @@ public class OutboxEvent {
     @Column(name = "error_message")
     private String errorMessage;
 
-    public OutboxEvent(UUID aggregateId, String aggregateType, String eventType, String payload) {
+    @Column(name = "trace_parent")
+    private String traceParent;
+
+    public OutboxEvent(UUID aggregateId, String aggregateType, String eventType, String payload, String traceParent) {
         this.id = UUID.randomUUID();
         this.aggregateId = aggregateId;
         this.aggregateType = aggregateType;
@@ -57,6 +60,7 @@ public class OutboxEvent {
         this.status = OutboxStatus.PENDING;
         this.createdAt = OffsetDateTime.now();
         this.retryCount = 0;
+        this.traceParent = traceParent;
     }
 
     void markProcessing() {

@@ -1,6 +1,8 @@
 package com.lmf.platform.messaging;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.tracing.Tracer;
+import io.micrometer.tracing.propagation.Propagator;
 import jakarta.persistence.EntityManagerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -32,8 +34,9 @@ public class PlatformMessagingAutoConfiguration {
     }
 
     @Bean
-    public OutboxWriter outboxWriter(OutboxEventRepository outboxEventRepository, ObjectMapper objectMapper) {
-        return new OutboxWriter(outboxEventRepository, objectMapper);
+    public OutboxWriter outboxWriter(OutboxEventRepository outboxEventRepository, ObjectMapper objectMapper,
+                                      Tracer tracer, Propagator propagator) {
+        return new OutboxWriter(outboxEventRepository, objectMapper, tracer, propagator);
     }
 
     @Bean
@@ -47,7 +50,10 @@ public class PlatformMessagingAutoConfiguration {
                                    MessagePublisher messagePublisher,
                                    OutboxTopicRouter outboxTopicRouter,
                                    ObjectMapper objectMapper,
-                                   PlatformMessagingProperties properties) {
-        return new OutboxRelay(outboxEventRepository, messagePublisher, outboxTopicRouter, objectMapper, properties.getDltTopic());
+                                   PlatformMessagingProperties properties,
+                                   Tracer tracer,
+                                   Propagator propagator) {
+        return new OutboxRelay(outboxEventRepository, messagePublisher, outboxTopicRouter, objectMapper,
+                properties.getDltTopic(), tracer, propagator);
     }
 }

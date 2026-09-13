@@ -63,6 +63,8 @@ Para rodar um serviço fora do container (pelo IDE ou `./mvnw spring-boot:run`),
 
 Portas HTTP dos serviços: OrderService `8081` (via `SERVER_PORT` no compose; fora do Docker o default do Spring é `8080`), PaymentService `8082`, InventoryService `8083`, NotificationService `8084`, FraudService `8085`, AuditService `8086`, AuthService `8087`, GatewayService `8088`. Actuator + métricas Prometheus ficam expostos em `/actuator/prometheus`.
 
+O compose também sobe um `jaeger` (`jaegertracing/all-in-one`) para tracing distribuído: UI em `http://localhost:16686`, recebedor OTLP HTTP em `4318` (é para lá que todos os oito serviços exportam spans via `management.otlp.tracing.endpoint`, configurável por `OTLP_TRACING_ENDPOINT`, default `http://localhost:4318/v1/traces` fora do Docker). Ver ADR 0009.
+
 ## Arquitetura
 
 Cada serviço implementado segue camadas de DDD + Clean/Hexagonal. Os nomes de pacote variam um pouco entre serviços, mas os papéis são consistentes:
@@ -97,4 +99,4 @@ Tópicos: `order.created`, `fraud.approved`, `fraud.rejected`, `inventory.reserv
 
 ### Observabilidade
 
-As requisições carregam um correlation id via `CorrelationIdFilter`; os padrões de log incluem `traceId`/`spanId`/`correlationId` (Micrometer tracing com a ponte Brave no OrderService).
+As requisições carregam um correlation id via `CorrelationIdFilter`; os padrões de log incluem `traceId`/`spanId`/`correlationId`. O tracing distribuído usa Micrometer Tracing com a ponte OpenTelemetry (`micrometer-tracing-bridge-otel`) em todos os oito serviços, exportando via OTLP para o Jaeger (ver "Infraestrutura local"). A lacuna histórica do Transactional Outbox — o span da requisição HTTP original morre antes do `OutboxRelay` publicar, minutos depois, numa thread `@Scheduled` sem contexto — é fechada por uma coluna `trace_parent` em `outbox_events`: o `OutboxWriter` grava o `traceparent` (W3C) do span corrente na mesma transação de negócio, e o `OutboxRelay` o retoma como span pai ao publicar, para que o header Kafka carregue o trace contínuo até o próximo consumidor. `correlationId` continua sendo um id de negócio separado, não unificado com o `traceId` do OTel. Ver ADR 0009.

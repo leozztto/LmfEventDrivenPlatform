@@ -13,3 +13,4 @@ só o resultado final. Formato: Status / Contexto / Decisão / Consequências.
 | [0006](0006-audit-event-sink.md) | AuditService: sink de auditoria append-only, consumo tipado, sem Outbox |
 | [0007](0007-authservice-jwt-stateless-rsa-jwks.md) | AuthService: emissão de JWT stateless com assinatura RSA + JWKS, sem Authorization Server |
 | [0008](0008-gateway-borda-jwt-webmvc-ratelimit-openapi.md) | GatewayService: validação de JWT na borda, Spring Cloud Gateway WebMVC, rate limit Resilience4j e agregação de OpenAPI |
+| [0009](0009-tracing-distribuido-opentelemetry-kafka.md) | Tracing distribuído com OpenTelemetry (Jaeger + Micrometer/OTel), propagado via headers Kafka através do Outbox |
